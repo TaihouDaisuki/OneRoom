@@ -2,8 +2,18 @@
 
 using namespace std;
 
+const char _ip[] = "0.0.0.0";
+const int _port = 4347;
+
 //==========ClientInfo==========
-ClientInfo::ClientInfo(const int _fd = 0, const char* const _ip, const int _port)
+ClientInfo::ClientInfo()
+{
+    sockfd = 0;
+    userid = NOTLOGGEDIN;
+    bufflen = buffp = 0;
+    buff = NULL;
+}
+ClientInfo::ClientInfo(const int _fd, const char* const _ip, const int _port)
 {
     strcpy(ip, _ip);
     port = _port;
@@ -25,14 +35,20 @@ void ClientInfo::set(const int _userid)
     userid = _userid;
     bufflen = buffp = 0;
     if(buff != NULL)
+    {
         delete buff;
+        buff = NULL;
+    }
 }
 void ClientInfo::reset()
 {
     userid = NOTLOGGEDIN;
     bufflen = buffp = 0;
     if(buff != NULL)
+    {
         delete buff;
+        buff = NULL;
+    }
 }
 
 int ClientInfo::is_Logged_in() const
@@ -53,16 +69,16 @@ int ClientInfo::Read_Bitstream()
     } while (_rs < 0 && errno == EINTR);
 
     if(_rs == 0)
-        return READCLOSE;
+        return READ_CLOSE;
     else if (_rs < 0)
     {
         if(errno == EWOULDBLOCK || errno == EAGAIN)
-            return READHUNGUP;
+            return READ_HUNGUP;
         cerr << "sockfd[" << sockfd "] Read error: " << strerror(errno) << endl;
         cerr << "It's belong to userid = " << userid << endl << endl;
-        return READERROR;
+        return READ_ERROR;
     }
-    return READFINISH;
+    return READ_FINISH;
 }
 int ClientInfo::Write_Bitstream()
 {
@@ -77,16 +93,16 @@ int ClientInfo::Write_Bitstream()
     } while(_ws < 0 && errno == EINTR);
 
     if(_ws == 0)
-        return WRITECLOSE;
+        return WRITE_CLOSE;
     else if(_ws < 0)
     {
         if(errno == EWOULDBLOCK || errno == EAGAIN)
-            return WRITEHANGUP;
+            return WRITE_HANGUP;
         cerr << "sockfd[" << sockfd "] Write error: " << strerror(errno) << endl;
         cerr << "It's belong to userid = " << userid << endl << endl;
-        return WRITEERROR;
+        return WRITE_ERROR;
     }
-    return WRITEFINISH;
+    return WRITE_FINISH;
 }
 
 //==========ServerSock==========
@@ -129,7 +145,7 @@ ServerSock::ServerSock()
 	}
 
     //==========reset==========
-    clisockp.clear();
+    clientlist.clear();
     clicnt = 0;
 
     userlist.clear();
@@ -138,12 +154,7 @@ ServerSock::~ServerSock()
 {
     // save data into database
     // close all socket
-    list<ClientInfo *>::iterator it;
-    for(it = clientp.begin(); it != clientp.end(); ++it)
-    {
-        delete *it;
-        list.erase(it);
-    }
+    clientlist.clear();
         
     return;
 }
@@ -156,7 +167,7 @@ int ServerSock::Server_Start()
     cout << "===================================" << endl;
     cout << endl << endl;
 
-    fd_set sockfds, readfds, writefds;
+    fd_set sockfds, readfds;
 
 	FD_ZERO(&sockfds);
 	FD_SET(listenfd, &sockfds);
@@ -164,12 +175,11 @@ int ServerSock::Server_Start()
     while(TAIHOUDAISUKI)
     {
         readfds = sockfds;
-        writefds = sockfds;
-        int retsel = select(FD_SETSIZE, &readfds, &writefds, NULL, NULL);
+        int retsel = select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
 		if (retsel <= 0)
 		{
 			cerr << "Server Select error: " << strerror(errno) << endl;
-			return;
+			return SERVER_ERROR;
 		}
 
         // listen socket
@@ -189,16 +199,9 @@ int ServerSock::Server_Start()
                 uint16_t cli_port = ntohs(cliaddr.sin_port);
                 cout << "Server: Detect a connection from " << ipbuff << ", port " << cli_port << endl;
 
-                ClientInfo* _clientp = new(nothrow) ClientInfo(clientfd, ipbuff, cli_port);
-                if(_clientp == NULL)
-                {
-                    cerr << "Server: No more memory for this client" << endl << endl;
-                    close(clientfd);
-                    continue;
-                }
-                clientp.push_back(_clientp);
+                ClientInfo newclient = (clientfd, ipbuff, cli_port);
+                clientlist.push_back(newclient);
 
-                fdList[i] = clientfd;
                 flag = fcntl(clientfd, F_GETFL, 0);
                 fcntl(clientfd, F_SETFL, flag | O_NONBLOCK);
                 FD_SET(clientfd, &sockfds);
@@ -207,88 +210,179 @@ int ServerSock::Server_Start()
         }
 
         // client socket
-        if(clientp.empty())
-            continue;
-
-        iterator<>
-        list<ClientInfo *>::iterator it;
-        for(it = clientp.begin(); it != clientp.end(); ++it)
+        list<ClientInfo>::iterator it;
+        for(it = clientlist.begin(); it != clientlist.end(); )  // be care of it++
         {
-            ClientInfo* curclip = *it;
-            if(FD_ISSET(curclip->sockfd, &readfds))
+            ClientInfo curclient = *it;
+            if(!FD_ISSET(curclient.sockfd, &readfds))
+                continue;
+            int read_res = curclient.Read_Bitstream();
+            if(read_res == READ_HUNGUP)
+                continue;
+            if(read_res == READ_ERROR || read_res == READ_CLOSE)
             {
-                int read_res = curclip->Read_Bitstream();
-                if(read_res == READHUNGUP)
-                    continue;
-                if(read_res == READERROR || read_res == READCLOSE)
-                {
-                    Log_out(curclip);
-                    delete *curclip;
-                    --
-                    continue;
-                }
-                if(read_res == READFINISH)
-                {
-                    // save into database?
-                    // exchange information?
-                    // log in?
-                    // log out?
-                    // ......
-                }
+                log_out_request(curclient);
+                clientlist.erase(it++);
+                continue;
             }
-            if(FD_ISSET(curclip->sockfd, &writefds) && /*(***)*/)
+            if(read_res == READ_FINISH)
             {
-                int write_res = curclip->Write_Bitstream();
-                if(read_res == WRITEHUNGUP)
-                    continue;
-                if(read_res == WRITEERROR || read_res == WRITECLOSE)
-                {
-                    if(curclip->is_Logged_in())
-                        Log_out(curclip->userid);
-                    delete *curclip;
-                    continue;
-                }
-                if(read_res == READFINISH)
-                {
-                    // save into database?
-                    // exchange information?
-                    // log in?
-                    // log out?
-                    // ......
-                }
+                /*
+                    if(request == logout)
+                    {
+                        log_out_request(curclient);
+                        clientlist.erase(it++);
+                        continue;
+                    }
+                */
+                // *check buffer kind
+                // *deal different kind
             }
         }
     }
 }
+/*
+    read / write error ==> disconnect ==> remove ==> flag = 1
+    login / logout ==> flag = 0 & flush (if disconnect ==> flag = 1)
+    loop final ==> flag = 1 ==> flush ==> flag = 0 (if disconnect ==> flag = 1)
+*/
 
-void ServerSock::Log_in(const char* const username, ClientInfo * const curclip)
+
+int ServerSock::log_in_request(ClientInfo &client)
 {
-    int userid;
-    // get userid from database by username
-    map<int, list<ClientInfo*>::iterator>::iterator it = userlist.serach(userid);
-    if(it != map.end()) // has logged in
+    char account[MAXACCLEN + 1]; // get account from packet
+    char password[MAXPASSLEN + 1]; // get password from packet
+    char pass_MD5[MD5LEN + 1]; // get MD5
+    int dbaccres; // count(*) where database.account == account
+    int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+    if(!dbaccres)
     {
-        ClientInfo* loggedin = it->second;
-        // send message let it log out
-        cout << "user: " << username << "[id = " << userid << " ] is kick off from [ip = " 
-            << loggedin->ip << ", port = " << loggedin->port << endl;
-        loggedin->reset();
+        // *reply request account doesn't exist
+        return 1;
+    }
+    if(!dbMD5res)
+    {
+        // *reply request password error
+        return 1;
+    }
+
+    // identify success
+    char username[MAXNAMELEN]; // get username from database
+    int userid; // get userid from database
+
+    map<int, int>::iterator it = userlist.serach(userid);
+    if(it != map.end()) // kick off
+    {
+        ClientInfo preclient = it->second;
+
+        // *send message to preclient for logging out
+
+        cout << "[userid = " << userid << " ] is kick off from [ip = " 
+            << preclient.ip << ", port = " << preclient.port << endl;
+        preclient.reset();
         userlist.erase(it);
     }
-    cout << "user: " << username << "[id = " << userid << " ] log in from [ip = " 
-        << curclip->ip << ", port = " << curclip->port << endl << endl;
-    curclip->set(userid);
-    userlist.insert(make_pair(userid, curclip));
 
+    // log in
+    // *reply request successfully
+
+    cout << "[userid = " << userid << " ] log in from [ip = " 
+        << client.ip << ", port = " << client.port << endl << endl;
+    userlist.insert(make_pair(userid, client.sockfd));
+    client.set(userid);
+
+    return 1;
 }
-void ServerSock::Log_out(ClientInfo * const curclip)
+int ServerSock::log_out_request(ClientInfo &client)
 {
-    char *username;
-    // get username from database by userid
-    if(!curclip->is_Logged_in())
-        return;
-    cout << "user: " << username << "[id = " << userid << "] log out from [ip = " 
-        << curclip->ip << ", port = " << curclip->port << endl << endl;
-    curclip->reset();
-    userlist.erase(curclip->userid);
+    cout << "[userid = " << client.userid << " ] log out from [ip = " 
+        << client.ip << ", port = " << client.port << endl << endl;
+    userlist.erase(client.userid);
+    client.reset();
+
+    return 1;
+}
+int ServerSock::get_userlist_request(ClientInfo &client)
+{
+    map<int, int>::iterator it;
+    for(it = userlist.begin(); it != userlist.end(); ++it)
+    {
+        // *select * where databse.userid == it->userid*
+        // *write (account, username) into a struct ?
+    }
+    // *reply userlist struct
+
+    return 1;
+}
+int ServerSock::get_setting_request(ClientInfo &client)
+{
+    // read xml file into a struct
+    // reply setting struct 
+
+    return 1;
+}
+int ServerSock::is_change_setting_request(ClientInfo &client)
+{
+    // receive setting struct
+    // save struct into a xml file
+    // reply setting save successfully
+
+    return 1;
+}
+int ServerSock::transmit_request(ClientInfo &client)
+{
+    int mess_type; // in _messagetpye
+    int snd_type; // in _sendtype
+    int rcver_cnt = 0;
+    char rcver_acc[MAXCONNNUM][MAXACCLEN];
+    int rcver_uid[MAXCONNNUM];
+    int rcver_fd[MAXCONNNUM];
+
+    switch (snd_type)
+    {
+        case P_2_P:
+        {
+            rcver_acc[rcver_cnt]
+            ++rcver_cnt;
+            break;
+        }
+        case P_2_G:
+        {
+            break;
+        }
+        case P_2_A:
+        {
+            map<int, int>::iterator it;
+            for(it = userlist.begin(); it != userlist.end(); ++it)
+
+            break;
+        }
+        default:
+        {
+            rcver_cnt = 0;
+            break;
+        }
+    }
+
+
+    switch (mess_type)
+    {
+        case TEXT_TYPE:
+        {
+            
+            break;
+        }
+        case GRAPH_TYPE:
+        {
+            break;
+        }
+        case FILE_TYPE:
+        {
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
 }
