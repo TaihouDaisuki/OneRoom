@@ -69,7 +69,7 @@ void OneRoomClient::setUserList()
 // 设置消息图形属性并加入list
 void OneRoomClient::handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type)
 {
-	message->setFixedWidth(ui.msgListWidget->width());
+	message->setFixedWidth(ui.msgListWidget->width() - 10);
 	QSize size = message->fontRect(text);	// 获取文本框大小
 	item->setSizeHint(size);	// 设置尺寸
 	message->setText(text, time, size, type);
@@ -95,7 +95,7 @@ void OneRoomClient::handleMessageTime(QString curMsgTime)
 	if (isShowTime) {
 		Message *messageTime = new Message(ui.msgListWidget->parentWidget());	// 时间消息
 		QListWidgetItem *itemTime = new QListWidgetItem(ui.msgListWidget);	// 新itme对象，用parent widget初始化
-		QSize size = QSize(ui.msgListWidget->width(), 40);
+		QSize size = QSize(ui.msgListWidget->width() - 10, 40);
 		messageTime->resize(size);	// 设置大小
 		itemTime->setSizeHint(size);
 		messageTime->setText(curMsgTime, curMsgTime, size, Message::User_Time);	// 设置时间消息

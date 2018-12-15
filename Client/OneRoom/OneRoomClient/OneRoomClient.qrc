@@ -1,4 +1,7 @@
 <RCC>
-    <qresource prefix="OneRoomClient">
+    <qresource prefix="/Resources">
+        <file>Resources/img/Customer Copy.png</file>
+        <file>Resources/img/CustomerService.png</file>
+        <file>Resources/img/loading4.gif</file>
     </qresource>
 </RCC>

@@ -18,11 +18,11 @@ Message::Message(QWidget *parent) : QWidget(parent)
 	//    te_font.setLetterSpacing(QFont::PercentageSpacing, 100);          //300%,100为默认  //设置字间距%
 	//    te_font.setLetterSpacing(QFont::AbsoluteSpacing, 0);             //设置字间距为3像素 //设置字间距像素值
 	this->setFont(te_font);
-	m_leftPixmap = QPixmap(":/img/Customer Copy.png");
-	m_rightPixmap = QPixmap(":/img/CustomerService.png");
+	m_leftPixmap = QPixmap(":/Resources/Resources/img/Customer Copy.png");
+	m_rightPixmap = QPixmap(":/Resources/Resources/img/CustomerService.png");
 
 	m_loadingMovie = new QMovie(this);
-	m_loadingMovie->setFileName(":/img/loading4.gif");
+	m_loadingMovie->setFileName(":/Resources/Resources/img/loading4.gif");
 	m_loading = new QLabel(this);
 	m_loading->setMovie(m_loadingMovie);
 	m_loading->resize(16, 16);
