@@ -29,15 +29,17 @@
 #define MAXCONNNUM              64
 #define NOTLOGGEDIN             -1
 
+#define MAXACCLEN               30
+#define MAXPASSLEN              30
+#define MAXNAMELEN              30
+#define MD5LEN                  16
+
 
 using namespace std;
 
-const char _ip[] = "0.0.0.0";
-const int _port = 4347;
-
 enum _serverres
 {
-    SERVERDEFAULT, SERVERERROR, SERVERFINISH
+    SERVER_DEFAULT, SERVER_ERROR, SERVER_FINISH
 }
 
 class ClientInfo
@@ -45,15 +47,41 @@ class ClientInfo
 public:
     enum _readres
     {
-        READDEFAULT, READFINISH, READHUNGUP, READCLOSE, READERROR
+        READ_DEFAULT, READ_FINISH, READ_HUNGUP, READ_CLOSE, READ_ERROR
     };
     enum _writeres
     {
-        WRITEDEFAULT, WRITEFINISH, WRITEHUNGUP, WRITECLOSE, WRITEERROR
+        WRITE_DEFAULT, WRITE_FINISH, WRITE_HUNGUP, WRITE_CLOSE, WRITE_ERROR
     };
 
-    ClientInfo(const int fd = 0, const char* const ip, const int port);
+    ClientInfo();
+    ClientInfo(const int fd, const char* const ip, const int port);
     ~ClientInfo();
+
+    bool operator ==(const ClientInfo &rhs) const
+    {
+        return sockfd == rhs.fd;
+    }
+    ClientInfo& operator =(const ClientInfo &rhs)
+    {
+        sockfd = rhs.sockfd;
+        userid = rhs.userid;
+        memcpy(ip, rhs.ip, INET_ADDRSTRLEN + 1);
+        port = rhs.port;
+        bufflen = rhs.bufflen;
+        buffp = rhs.buffp;
+        if(rhs.buff == NULL)
+            buff = NULL;
+        else
+        {
+            buff = new(nothrow) char[bufflen];
+            if(buff == NULL)
+                bufflen = buffp = 0;
+            else
+                memcpy(buff, rhs.buff, bufflen);
+        }   
+        return *this;         
+    }
 
     void set(const int userid);
     void reset();
@@ -80,15 +108,25 @@ public:
 
     int Server_Start();
 private:
-    void Log_in(const char* const username, ClientInfo * const curclip);
-    void Log_out(ClientInfo * const curclip);
+    enum _requesttype
+    {
+        DEFAULT_REQUEST, LOG_IN, LOG_OUT, GET_USERLIST, GET_SETTINGS, CHANGE_SETTINGS, TRANSMIT_MSG
+    };
+    enum _messagetpye
+    {
+        DEFAULT_MESSAGE, TEXT_TYPE, GRAPH_TYPE, FILE_TYPE
+    };
+    enum _sendtype
+    {
+        DEFAULT_RECEIVER, P_2_P, P_2_G, P_2_A
+    };
 
     sockaddr_in serveraddr;
     int listenfd;
 
-    list<ClientInfo*> clientp;
+    list<ClientInfo> clientlist;
     int clicnt;
-    map<int, ClientInfo*> userlist;
+    map<int, int> userlist; // first-userid, second-sockfd
 };
 
 #endif
