@@ -8,6 +8,7 @@
         "initializer_list": "cpp",
         "system_error": "cpp",
         "map": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "iosfwd": "cpp"
     }
 }

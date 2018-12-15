@@ -75,7 +75,7 @@ int ClientInfo::Read_Bitstream()
         if(errno == EWOULDBLOCK || errno == EAGAIN)
             return READ_HUNGUP;
         cerr << "sockfd[" << sockfd "] Read error: " << strerror(errno) << endl;
-        cerr << "It's belong to userid = " << userid << endl << endl;
+        cerr << "It's belong to userid = " << userid << endl;
         return READ_ERROR;
     }
     return READ_FINISH;
@@ -99,7 +99,7 @@ int ClientInfo::Write_Bitstream()
         if(errno == EWOULDBLOCK || errno == EAGAIN)
             return WRITE_HANGUP;
         cerr << "sockfd[" << sockfd "] Write error: " << strerror(errno) << endl;
-        cerr << "It's belong to userid = " << userid << endl << endl;
+        cerr << "It's belong to userid = " << userid << endl;
         return WRITE_ERROR;
     }
     return WRITE_FINISH;
@@ -149,6 +149,7 @@ ServerSock::ServerSock()
     clicnt = 0;
 
     userlist.clear();
+    userreq = 0;
 }
 ServerSock::~ServerSock()
 {
@@ -211,21 +212,25 @@ int ServerSock::Server_Start()
 
         // client socket
         list<ClientInfo>::iterator it;
-        for(it = clientlist.begin(); it != clientlist.end(); )  // be care of it++
+        for(it = clientlist.begin(); it != clientlist.end(); ) 
         {
             ClientInfo curclient = *it;
             if(!FD_ISSET(curclient.sockfd, &readfds))
                 continue;
             int read_res = curclient.Read_Bitstream();
             if(read_res == READ_HUNGUP)
-                continue;
-            if(read_res == READ_ERROR || read_res == READ_CLOSE)
             {
-                log_out_request(curclient);
-                clientlist.erase(it++);
+                ++it;  // be care of it++
                 continue;
             }
-            if(read_res == READ_FINISH)
+            if(read_res == READ_ERROR || read_res == READ_CLOSE)
+            {
+                log_out_unexpected(curclient);
+                clientlist.erase(it++);
+                userreq = 1;
+                continue;
+            }
+            if(read_res == READ_FINISH)  // be care of it++
             {
                 /*
                     if(request == logout)
@@ -239,6 +244,11 @@ int ServerSock::Server_Start()
                 // *deal different kind
             }
         }
+
+        if(!userreq)
+            continue;
+        // some one disconnect when sending userlist, resend it
+        userreq = userlist_request_to_all();
     }
 }
 /*
@@ -247,14 +257,14 @@ int ServerSock::Server_Start()
     loop final ==> flag = 1 ==> flush ==> flag = 0 (if disconnect ==> flag = 1)
 */
 
-
-int ServerSock::log_in_request(ClientInfo &client)
+int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit max log in number
 {
     char account[MAXACCLEN + 1]; // get account from packet
     char password[MAXPASSLEN + 1]; // get password from packet
     char pass_MD5[MD5LEN + 1]; // get MD5
     int dbaccres; // count(*) where database.account == account
     int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+    int fsttime; // select fsttime where database.account == account
     if(!dbaccres)
     {
         // *reply request account doesn't exist
@@ -265,21 +275,26 @@ int ServerSock::log_in_request(ClientInfo &client)
         // *reply request password error
         return 1;
     }
+    if(fsttime)
+    {
+        // *reply to change default password
+        return 1;
+    }
 
     // identify success
     char username[MAXNAMELEN]; // get username from database
     int userid; // get userid from database
 
-    map<int, int>::iterator it = userlist.serach(userid);
+    map<int, ClientInfo*>::iterator it = userlist.serach(userid);
     if(it != map.end()) // kick off
     {
-        ClientInfo preclient = it->second;
+        ClientInfo* preclient = it->second;
 
         // *send message to preclient for logging out
 
         cout << "[userid = " << userid << " ] is kick off from [ip = " 
-            << preclient.ip << ", port = " << preclient.port << endl;
-        preclient.reset();
+            << preclient->ip << ", port = " << preclient->port << endl;
+        preclient->reset();
         userlist.erase(it);
     }
 
@@ -287,32 +302,47 @@ int ServerSock::log_in_request(ClientInfo &client)
     // *reply request successfully
 
     cout << "[userid = " << userid << " ] log in from [ip = " 
-        << client.ip << ", port = " << client.port << endl << endl;
-    userlist.insert(make_pair(userid, client.sockfd));
-    client.set(userid);
+        << client->ip << ", port = " << client->port << endl << endl;
+    userlist.insert(make_pair(userid, client));
+    client->set(userid);
 
+    userreq = userlist_request_to_all();
     return 1;
 }
-int ServerSock::log_out_request(ClientInfo &client)
+int ServerSock::log_out_request(ClientInfo *client, list<ClientInfo>::iterator &it)
 {
-    cout << "[userid = " << client.userid << " ] log out from [ip = " 
-        << client.ip << ", port = " << client.port << endl << endl;
-    userlist.erase(client.userid);
-    client.reset();
+    cout << "[userid = " << client->userid << " ] log out from [ip = " 
+        << client->ip << ", port = " << client->port << endl << endl;
 
+    userlist.erase(client->userid);
+    clientlist.erase(it++);
+
+    userreq = userlist_request_to_all();
     return 1;
 }
-int ServerSock::get_userlist_request(ClientInfo &client)
+int ServerSock::change_password_request(ClientInfo *client)
 {
-    map<int, int>::iterator it;
-    for(it = userlist.begin(); it != userlist.end(); ++it)
+    char account[MAXACCLEN + 1]; // get account from packet
+    char oldpassword[MAXPASSLEN + 1]; // get password from packet
+    char oldpass_MD5[MD5LEN + 1]; // get MD5
+    char newpassword[MAXPASSLEN + 1]; // get password from packet
+    char newpass_MD5[MD5LEN + 1]; // get MD5
+    int dbaccres; // count(*) where database.account == account
+    int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+
+    if(!dbaccres)
     {
-        // *select * where databse.userid == it->userid*
-        // *write (account, username) into a struct ?
+        // *reply request account doesn't exist
+        return 1;
     }
-    // *reply userlist struct
+    if(!dbMD5res)
+    {
+        // *reply request old password error
+        return 1;
+    }
 
-    return 1;
+    // *change password in database and set first_time_log_in to 0
+    // *reply password change successfully
 }
 int ServerSock::get_setting_request(ClientInfo &client)
 {
@@ -336,24 +366,43 @@ int ServerSock::transmit_request(ClientInfo &client)
     int rcver_cnt = 0;
     char rcver_acc[MAXCONNNUM][MAXACCLEN];
     int rcver_uid[MAXCONNNUM];
-    int rcver_fd[MAXCONNNUM];
+    ClientInfo* rcver_client[MAXCONNNUM];
+    int snd_succ[MAXCONNNUM];
+    map<int, int>::iterator it;
 
     switch (snd_type)
     {
         case P_2_P:
         {
-            rcver_acc[rcver_cnt]
+            // *get rcver_acc[rcver_cnt] from data pack
+            // rcver_uid[rcver_cnt] = select uid from database where database.account == rcver_acc[rcver_cnt]
+            it = userlist.find(rcver_uid[rcver_cnt]);
+            if(it == userlist.end())
+                snd_succ[rcver_cnt] = 0;
+            else
+            {
+                snd_succ[rcver_cnt] = 1;
+                rcver_client[rcver_cnt] = it->second();
+            }
             ++rcver_cnt;
             break;
         }
         case P_2_G:
         {
+            // * for ----> get rcver_acc[rcver_cnt] from data pack
+            // * other like P_2_P, a loop end with ++rcver_cnt for each loop
             break;
         }
         case P_2_A:
         {
             map<int, int>::iterator it;
-            for(it = userlist.begin(); it != userlist.end(); ++it)
+            for(it = userlist.begin(); it != userlist.end(); ++it, ++rcver_cnt)
+            {
+                snd_succ[rcver_cnt] = 1;
+                rcver_uid[rcver_cnt] = it->first;
+                rcver_client[rcver_cnt] = it->second;
+                // rcver_acc[rcver_cnt] = select account from database where database.uid == rcver_uid[rcver_cnt]
+            }
 
             break;
         }
@@ -364,20 +413,23 @@ int ServerSock::transmit_request(ClientInfo &client)
         }
     }
 
-
     switch (mess_type)
     {
         case TEXT_TYPE:
         {
-            
+            // *write text into common_buffer
             break;
         }
         case GRAPH_TYPE:
         {
+            // *save graph into file
+            // *write graph into common_buffer (if file is large maybe need to send serval times)
             break;
         }
         case FILE_TYPE:
         {
+            // *save file
+            // *write file into common_buffer (if file is large maybe need to send serval times)
             break;
         }
         default:
@@ -385,4 +437,77 @@ int ServerSock::transmit_request(ClientInfo &client)
             break;
         }
     }
+
+    for(int i = 0; i < rcver_cnt; ++i)
+    {
+        if(!snd_succ[i]) // socket has close / user has log out
+            continue;
+
+        ClientInfo* client = rcver_client[i];
+        int _ws = client->Write_Bitstream();
+        while(_ws == WRITE_HUNGUP)
+        {
+            sleep(1); // avoid occupy CPU
+            _ws = client->Write_Bitstream();
+        }
+        if(_ws == WRITE_CLOSE || WRITE_ERROR)
+        {
+            res = 1;
+            log_out_unexpected(client);
+            list<ClientInfo>::iterator it = find(clientlist.begin(), clientlist.end(), *client);
+            if(it != clientlist.end())
+                list.erase(it);
+            continue;
+        }
+        else if(_ws == WRITE_FINISH)
+            continue;
+    }
+
+    // *write user_acc[i] and snd_succ[i] a pair into file
+    // *write file into buffer
+    // *send file back to client
+}
+int ServerSock::userlist_request_to_all()
+{
+    map<int, ClientInfo *>::iterator mapit;
+    for(mapit = userlist.begin(); mapit != userlist.end(); ++it)
+        ; // *write userid in userlist into file (e.g. xml)
+    
+    int res = 0;
+    
+    list<ClientInfo>::iterator listit;
+    for(listit = clientlist.begin(); listit != clientlist.end(); )
+    {
+        ClientInfo client = *listit;
+        // *write userlist(xml file) into buffer
+        int _ws = client.Write_Bitstream();
+        while(_ws == WRITE_HUNGUP)
+        {
+            sleep(1); // avoid occupy CPU
+            _ws = client.Write_Bitstream();
+        }
+        if(_ws == WRITE_CLOSE || WRITE_ERROR)
+        {
+            res = 1;
+            log_out_unexpected(&curclient);
+            clientlist.erase(listit++);
+            continue;
+        }
+        else if(_ws == WRITE_FINISH)
+            continue;
+        
+        //WRITE_DEFAULT should not be run if it run normally 
+        cerr << "WRITE_DEFAULT has been run, some bug may exist" << endl << endl << endl;
+    }
+
+    return res;
+}
+
+inline int Server::log_out_unexpected(ClientInfo *client)
+{
+    cout << "[userid = " << client->userid << " ] log out from [ip = " 
+        << client->ip << ", port = " << client->port << " unexpected." << endl << endl;
+
+    userlist.erase(client->userid);
+    return 1;
 }

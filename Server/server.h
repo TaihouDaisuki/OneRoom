@@ -60,7 +60,7 @@ public:
 
     bool operator ==(const ClientInfo &rhs) const
     {
-        return sockfd == rhs.fd;
+        return fd == rhs.fd;
     }
     ClientInfo& operator =(const ClientInfo &rhs)
     {
@@ -110,7 +110,7 @@ public:
 private:
     enum _requesttype
     {
-        DEFAULT_REQUEST, LOG_IN, LOG_OUT, GET_USERLIST, GET_SETTINGS, CHANGE_SETTINGS, TRANSMIT_MSG
+        DEFAULT_REQUEST, LOG_IN, LOG_OUT, CHANGE_PASSWORD, GET_SETTINGS, CHANGE_SETTINGS, TRANSMIT_MSG
     };
     enum _messagetpye
     {
@@ -121,12 +121,23 @@ private:
         DEFAULT_RECEIVER, P_2_P, P_2_G, P_2_A
     };
 
+    int log_in_request(ClientInfo *client);
+    int log_out_request(ClientInfo *client, list<ClientInfo>::iterator &it);
+    int get_setting_request(ClientInfo *client);
+    int is_change_setting_request(ClientInfo *client);
+    int transmit_request(ClientInfo *client);
+
+    int userlist_request_to_all();
+    int log_out_unexpected(ClientInfo *client);
+
     sockaddr_in serveraddr;
     int listenfd;
 
     list<ClientInfo> clientlist;
     int clicnt;
-    map<int, int> userlist; // first-userid, second-sockfd
+    map<int, ClientInfo*> userlist; // first-userid, second-sockfd
+
+    int userreq; // 0-noneed 1-resend
 };
 
 #endif
