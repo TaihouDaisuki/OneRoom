@@ -1,11 +1,18 @@
 #include "OneRoomClient.h"
 #include <qdatetime.h>
+#include <qtextcodec.h>
 
 OneRoomClient::OneRoomClient(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
+	ui.userListWidget->setSelectionMode(QAbstractItemView::ContiguousSelection);	// 设置多选
 
+	userList.append(new UserInfo("Megumi", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
+	userList.append(new UserInfo(QString::fromLocal8Bit("测试"), "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
+	userList.append(new UserInfo("1234567890", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
+
+	updateUserList();
 	// connect
 	connect(ui.sendMsgBtn, SIGNAL(clicked()), this, SLOT(on_sendMsgBtn_clicked));
 } 
@@ -56,7 +63,6 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 		}
 	}
 	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
-
 }
 
 void OneRoomClient::on_newMsg_come(QString msg, QString sendTime)
@@ -68,18 +74,19 @@ void OneRoomClient::on_newMsg_come(QString msg, QString sendTime)
 // 更新用户列表
 void OneRoomClient::updateUserList()
 {
-	UserInfo i;
+	UserInfo *i;
 	foreach(i, userList) {	// 更新用户列表
 		UserInfo *info = new UserInfo(ui.userListWidget->parentWidget());
 		QListWidgetItem *item = new QListWidgetItem(ui.userListWidget);
-		handleUserinfo(info, item, i.nickName(), i.userName(), i.loginTime());
+		handleUserinfo(info, item, i->nickName(), i->userName(), i->loginTime());
 	}
 }
 
 // 加载信息并添加到list中
 void OneRoomClient::handleUserinfo(UserInfo *userInfo, QListWidgetItem *item, QString nickName, QString userName, QString loginTime)
 {
-	userInfo->setFixedWidth(ui.userListWidget->width());
+	int width = 256;
+	userInfo->setFixedWidth(width);
 	QSize size = userInfo->rectSize();
 	item->setSizeHint(size);
 	userInfo->setInfo(nickName, userName, loginTime);

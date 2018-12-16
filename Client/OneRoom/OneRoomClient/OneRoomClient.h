@@ -23,7 +23,7 @@ private slots:
 
 private:
 	Ui::OneRoomClientClass ui;
-	QList<UserInfo> userList;	// 在线用户列表
+	QList<UserInfo *> userList;	// 在线用户列表
 	// 重载事件函数
 	void resizeEvent(QResizeEvent *event);
 };

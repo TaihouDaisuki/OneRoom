@@ -42,13 +42,13 @@ QSize UserInfo::rectSize()
 {
 	QFontMetricsF fm(this->font());
 	u_lineHeight = fm.lineSpacing();
-	int height = 30;
+	int height = 60;
 	int iconWH = 40;
 	int iconSpaceW = 20;
 	int iconRectW = 5;
 	int iconTMPH = 10;
+	u_nickNameW = 100;
 	u_iconLeftRect = QRect(iconSpaceW, iconTMPH, iconWH, iconWH);
-	u_iconRightRect = QRect(this->width() - iconSpaceW - iconWH, iconTMPH, iconWH, iconWH);
 	u_nickNameRect.setRect(iconWH + iconSpaceW + iconRectW, u_lineHeight / 2, u_nickNameW, height - u_lineHeight);
 	return QSize(this->width(), height);
 }
@@ -63,14 +63,21 @@ void UserInfo::paintEvent(QPaintEvent *event)
 	painter.setBrush(QBrush(Qt::gray));
 	
 	// Í·Ïñ
-	painter.drawPixmap(u_iconRightRect, u_pixmap);
+	painter.drawPixmap(u_iconLeftRect, u_pixmap);
 	// ÎÄ×Ö
 	QPen penText;
-	penText.setColor(QColor(51, 51, 51));
+	penText.setColor(Qt::GlobalColor::black);
 	painter.setPen(penText);
 	QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
 	option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
 	painter.setFont(this->font());
 	painter.drawText(u_nickNameRect, u_nickName, option);
-
+	
+	// debug
+	//painter.setBrush(Qt::NoBrush);
+	//painter.drawRoundedRect(u_iconRightRect, 2, 2);
+	//painter.setBrush(Qt::NoBrush);
+	//painter.drawRoundedRect(u_nickNameRect, 2, 2);
+	//painter.setBrush(Qt::NoBrush);
+	//painter.drawRoundedRect(this->rect(), 2, 2);
 }
