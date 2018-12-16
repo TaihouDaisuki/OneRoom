@@ -9,6 +9,8 @@
         "system_error": "cpp",
         "map": "cpp",
         "ostream": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp"
     }
 }

@@ -8,10 +8,10 @@ const int _port = 4347;
 //==========ClientInfo==========
 ClientInfo::ClientInfo()
 {
-    sockfd = 0;
+    sockfd = ERRSOCKET;
     userid = NOTLOGGEDIN;
-    bufflen = buffp = 0;
-    buff = NULL;
+    bufflen[0] = buffp[0] = 0;
+    bufflen[1] = buffp[1] = 0;
 }
 ClientInfo::ClientInfo(const int _fd, const char* const _ip, const int _port)
 {
@@ -20,35 +20,25 @@ ClientInfo::ClientInfo(const int _fd, const char* const _ip, const int _port)
 
     sockfd = _fd;
     userid = NOTLOGGEDIN;
-    bufflen = buffp = 0;
-    buff = NULL;
+    bufflen[0] = buffp[0] = 0;
+    bufflen[1] = buffp[1] = 0;
 }
 ClientInfo::~ClientInfo()
 {
     close(sockfd);
-    if(buff != NULL)
-        delete buff;
 }
 
 void ClientInfo::set(const int _userid)
 {
     userid = _userid;
-    bufflen = buffp = 0;
-    if(buff != NULL)
-    {
-        delete buff;
-        buff = NULL;
-    }
+    bufflen[0] = buffp[0] = 0;
+    bufflen[1] = buffp[1] = 0;
 }
 void ClientInfo::reset()
 {
     userid = NOTLOGGEDIN;
-    bufflen = buffp = 0;
-    if(buff != NULL)
-    {
-        delete buff;
-        buff = NULL;
-    }
+    bufflen[0] = buffp[0] = 0;
+    bufflen[1] = buffp[1] = 0;
 }
 
 int ClientInfo::is_Logged_in() const
@@ -62,9 +52,9 @@ int ClientInfo::Read_Bitstream()
     do
     {
         errno = 0;
-        _rs = read(sockfd, buff + bufferp, bufflen - buffp);
-        buffp += (_rs > 0 ? _rs : 0);
-        if(buffp == bufflen)
+        _rs = read(sockfd, buff[0] + bufferp[0], bufflen[0] - buffp[0]);
+        buffp[0] += (_rs > 0 ? _rs : 0);
+        if(buffp[0] == bufflen[0])
             break;
     } while (_rs < 0 && errno == EINTR);
 
@@ -86,9 +76,9 @@ int ClientInfo::Write_Bitstream()
     do
     {
         errno = 0;
-        _ws = write(sockfd, buffer + buffer_p, Len - buffer_p);
-        buffp += (_ws > 0 ? _ws : 0);
-        if(buffp == bufflen)
+        _ws = write(sockfd, buffer[1] + buffer_p[1], bufflen[1] - buffer_p[1]);
+        buffp[1] += (_ws > 0 ? _ws : 0);
+        if(buffp[1] == bufflen[1])
             break;
     } while(_ws < 0 && errno == EINTR);
 
@@ -103,6 +93,51 @@ int ClientInfo::Write_Bitstream()
         return WRITE_ERROR;
     }
     return WRITE_FINISH;
+}
+
+void ClientInfo::Load_Buffer(void * const dst, const int len)
+{
+    memcpy(dst, buff[0], len);
+
+    return 1;
+}
+void ClientInfo::reset_read_buff(const int len)
+{
+    bufflen[0] = len;
+    buffp[0] = 0;
+}
+void ClientInfo::Save_Buffer(void * const src, const int len)
+{
+    memcpy(buff[1], src, len);
+    buffp[1] = 0;
+    bufflen[1] = len;
+
+    return 1;
+}
+
+int ClientInfo::Rcv(void *const dst, const int len)
+{
+    reset_read_buff(len);
+    int _rs = Read_Bitstream();
+    while (_rs == WRITE_HUNGUP)
+    {
+        sleep(1); // avoid occupy CPU
+        _rs = Write_Bitstream();
+    }
+    if(_rs == READ_FINISH)
+        Load_Buffer(dst, len);
+    return _rs;
+}
+int ClientInfo::Snd(void *const src, const int len)
+{
+    Save_Buffer(src, len);
+    int _ws = Write_Bitstream();
+    while (_ws == WRITE_HUNGUP)
+    {
+        sleep(1); // avoid occupy CPU
+        _ws = Write_Bitstream();
+    }
+    return _ws;
 }
 
 //==========ServerSock==========
@@ -201,6 +236,7 @@ int ServerSock::Server_Start()
                 cout << "Server: Detect a connection from " << ipbuff << ", port " << cli_port << endl;
 
                 ClientInfo newclient = (clientfd, ipbuff, cli_port);
+                newclient.reset_read_buff(CTRLPACKLEN); // set read buff len
                 clientlist.push_back(newclient);
 
                 flag = fcntl(clientfd, F_GETFL, 0);
@@ -215,8 +251,11 @@ int ServerSock::Server_Start()
         for(it = clientlist.begin(); it != clientlist.end(); ) 
         {
             ClientInfo curclient = *it;
-            if(!FD_ISSET(curclient.sockfd, &readfds))
+            if(it->sockfd == ERRSOCKET || !FD_ISSET(curclient.sockfd, &readfds))
+            {
+                ++it;
                 continue;
+            }
             int read_res = curclient.Read_Bitstream();
             if(read_res == READ_HUNGUP)
             {
@@ -232,16 +271,67 @@ int ServerSock::Server_Start()
             }
             if(read_res == READ_FINISH)  // be care of it++
             {
-                /*
-                    if(request == logout)
+                Packet packet;
+                curclient.Load_Buffer(&packet);
+                if(!curclient.is_Logged_in() && (packet.isData || packet.Type != LOG_IN_REQ))
+                {
+                    // *reply request error(has not log in)
+                    ++it;
+                    curclient.reset_read_buff(CTRLPACKLEN);
+                    continue;
+                }
+
+                int res = 0;
+                switch(packet.isData)
+                {
+                    case 0:
                     {
-                        log_out_request(curclient);
-                        clientlist.erase(it++);
-                        continue;
+                        switch(packet.Type)
+                        {
+                            case LOG_IN_REQ:
+                            {
+                                res = log_in_request(curclient);
+                                break;
+                            }
+                            case LOG_OUT_REQ:
+                            {
+                                res = log_out_request(curclient);
+                                break;
+                            }
+                            case CHG_PSSW_REQ:
+                            {
+                                res = change_password_request(curclient);
+                                break;
+                            }
+                            case CHG_SET_REQ:
+                            {
+                                res = change_setting_request(curclient);
+                                break;
+                            }
+                        }
+                        break;
                     }
-                */
-                // *check buffer kind
-                // *deal different kind
+                    case 1:
+                    {
+                        res = transmit_request(curclient, &packet);
+                        break;
+                    }
+                    default:
+                    {
+                        // *reply request error
+                        break;
+                    }
+                }
+                if(res == -1) // socket ERROR
+                {
+                    clientlist.erase(it++);
+                    continue;
+                }
+                if(res == 0) // command error
+                    //send command error to client
+                    ;
+                curclient.reset_read_buff(CTRLPACKLEN); // next round reading
+                ++it;
             }
         }
 
@@ -249,6 +339,13 @@ int ServerSock::Server_Start()
             continue;
         // some one disconnect when sending userlist, resend it
         userreq = userlist_request_to_all();
+        for(it = clientlist.begin(); it != clientlist.end(); )
+        {
+            if(it->sockfd == ERRSOCKET)
+                clientlist.erase(it++);
+            else
+                ++it;
+        }
     }
 }
 /*
@@ -257,7 +354,7 @@ int ServerSock::Server_Start()
     loop final ==> flag = 1 ==> flush ==> flag = 0 (if disconnect ==> flag = 1)
 */
 
-int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit max log in number
+int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wating for adding limit max log in number
 {
     char account[MAXACCLEN + 1]; // get account from packet
     char password[MAXPASSLEN + 1]; // get password from packet
@@ -265,6 +362,20 @@ int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit ma
     int dbaccres; // count(*) where database.account == account
     int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
     int fsttime; // select fsttime where database.account == account
+
+    int _rs = client->Rcv(account, MAXACCLEN);
+    if (_rs == READ_CLOSE || READ_ERROR)
+    {
+        log_out_unexpected(client);
+        return -1;
+    }
+    _rs = client->Rcv(password, MAXPASSLEN);
+    if (_rs == READ_CLOSE || READ_ERROR)
+    {
+        log_out_unexpected(client);
+        return -1;
+    }
+
     if(!dbaccres)
     {
         // *reply request account doesn't exist
@@ -299,6 +410,8 @@ int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit ma
     }
 
     // log in
+    // *read ini file into a struct
+    // *reply setting struct 
     // *reply request successfully
 
     cout << "[userid = " << userid << " ] log in from [ip = " 
@@ -309,13 +422,12 @@ int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit ma
     userreq = userlist_request_to_all();
     return 1;
 }
-int ServerSock::log_out_request(ClientInfo *client, list<ClientInfo>::iterator &it)
+int ServerSock::log_out_request(ClientInfo *client)
 {
     cout << "[userid = " << client->userid << " ] log out from [ip = " 
         << client->ip << ", port = " << client->port << endl << endl;
 
     userlist.erase(client->userid);
-    clientlist.erase(it++);
 
     userreq = userlist_request_to_all();
     return 1;
@@ -329,6 +441,25 @@ int ServerSock::change_password_request(ClientInfo *client)
     char newpass_MD5[MD5LEN + 1]; // get MD5
     int dbaccres; // count(*) where database.account == account
     int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+
+    _rs = client->Rcv(account, MAXACCLEN);
+    if (_rs == READ_CLOSE || READ_ERROR)
+    {
+        log_out_unexpected(client);
+        return -1;
+    }
+    _rs = client->Rcv(oldpassword, MAXPASSLEN);
+    if (_rs == READ_CLOSE || READ_ERROR)
+    {
+        log_out_unexpected(client);
+        return -1;
+    }
+    _rs = client->Rcv(newpassword, MAXPASSLEN);
+    if (_rs == READ_CLOSE || READ_ERROR)
+    {
+        log_out_unexpected(client);
+        return -1;
+    }
 
     if(!dbaccres)
     {
@@ -344,22 +475,15 @@ int ServerSock::change_password_request(ClientInfo *client)
     // *change password in database and set first_time_log_in to 0
     // *reply password change successfully
 }
-int ServerSock::get_setting_request(ClientInfo &client)
-{
-    // read xml file into a struct
-    // reply setting struct 
-
-    return 1;
-}
-int ServerSock::is_change_setting_request(ClientInfo &client)
+int ServerSock::change_setting_request(ClientInfo &client)
 {
     // receive setting struct
-    // save struct into a xml file
+    // save struct into a ini file
     // reply setting save successfully
 
     return 1;
 }
-int ServerSock::transmit_request(ClientInfo &client)
+int ServerSock::transmit_request(ClientInfo &client, CtrlPack *pack)
 {
     int mess_type; // in _messagetpye
     int snd_type; // in _sendtype
@@ -396,11 +520,14 @@ int ServerSock::transmit_request(ClientInfo &client)
         case P_2_A:
         {
             map<int, int>::iterator it;
-            for(it = userlist.begin(); it != userlist.end(); ++it, ++rcver_cnt)
+            for(it = userlist.begin(); it != userlist.end(); ++it)
             {
+                if(it->first == client.userid) // don't send to the sender
+                    continue;
                 snd_succ[rcver_cnt] = 1;
                 rcver_uid[rcver_cnt] = it->first;
                 rcver_client[rcver_cnt] = it->second;
+                ++rcver_cnt
                 // rcver_acc[rcver_cnt] = select account from database where database.uid == rcver_uid[rcver_cnt]
             }
 
@@ -444,12 +571,10 @@ int ServerSock::transmit_request(ClientInfo &client)
             continue;
 
         ClientInfo* client = rcver_client[i];
-        int _ws = client->Write_Bitstream();
-        while(_ws == WRITE_HUNGUP)
-        {
-            sleep(1); // avoid occupy CPU
-            _ws = client->Write_Bitstream();
-        }
+        if(client.sockfd == ERRSOCKET) // socket has error above
+            continue;   // but we check userlist first, so this might not work, for secure, take it
+
+        int _ws = client.Snd(buffer, len);
         if(_ws == WRITE_CLOSE || WRITE_ERROR)
         {
             res = 1;
@@ -476,28 +601,26 @@ int ServerSock::userlist_request_to_all()
     int res = 0;
     
     list<ClientInfo>::iterator listit;
-    for(listit = clientlist.begin(); listit != clientlist.end(); )
+    for(listit = clientlist.begin(); listit != clientlist.end(); ++listit)
     {
         ClientInfo client = *listit;
+        if(client.sockfd == ERRSOCKET)
+            continue;
         // *write userlist(xml file) into buffer
-        int _ws = client.Write_Bitstream();
-        while(_ws == WRITE_HUNGUP)
-        {
-            sleep(1); // avoid occupy CPU
-            _ws = client.Write_Bitstream();
-        }
+
+        /*int _ws = client.Snd(buffer, len);
         if(_ws == WRITE_CLOSE || WRITE_ERROR)
         {
             res = 1;
             log_out_unexpected(&curclient);
-            clientlist.erase(listit++);
+            client.sockfd = ERRSOCKET; // Don't erase it from clientlist here, or it will get wrong outside
             continue;
         }
         else if(_ws == WRITE_FINISH)
             continue;
         
         //WRITE_DEFAULT should not be run if it run normally 
-        cerr << "WRITE_DEFAULT has been run, some bug may exist" << endl << endl << endl;
+        cerr << "WRITE_DEFAULT has been run, some bug may exist" << endl << endl << endl; */
     }
 
     return res;

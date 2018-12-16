@@ -28,11 +28,28 @@
 #define TAIHOUDAISUKI           1
 #define MAXCONNNUM              64
 #define NOTLOGGEDIN             -1
+#define ERRSOCKET               -1
 
-#define MAXACCLEN               30
-#define MAXPASSLEN              30
-#define MAXNAMELEN              30
+#define MAXACCLEN               20
+#define MAXPASSLEN              20
+#define MAXNAMELEN              20
 #define MD5LEN                  16
+#define MAXDATALEN              1500
+#define CTRLPACKLEN             8
+#define PACKETLEN               1508
+#define MAXBUFFERLEN            2000
+
+// from client
+#define LOG_IN_REQ              0x00
+#define LOG_OUT_REQ             0x03
+#define CHG_PSSW_REQ            0x07
+#define CHG_SET_REQ             0x08
+// from server
+#define REQ_SUCC                0x01
+#define REQ_SET                 0x09
+#define REQ_ERR_CONN            0x0A
+#define REQ_ERR_DISC            0x0B
+#define REQ_USER                0x0C
 
 
 using namespace std;
@@ -68,18 +85,10 @@ public:
         userid = rhs.userid;
         memcpy(ip, rhs.ip, INET_ADDRSTRLEN + 1);
         port = rhs.port;
+
         bufflen = rhs.bufflen;
         buffp = rhs.buffp;
-        if(rhs.buff == NULL)
-            buff = NULL;
-        else
-        {
-            buff = new(nothrow) char[bufflen];
-            if(buff == NULL)
-                bufflen = buffp = 0;
-            else
-                memcpy(buff, rhs.buff, bufflen);
-        }   
+        memcpy(buff, rhs.buff, bufflen);
         return *this;         
     }
 
@@ -88,16 +97,25 @@ public:
 
     int Read_Bitstream();
     int Write_Bitstream();
+
+    void Load_Buffer(void * const dst, const int len);
+    void reset_read_buff(const int len);
+    void Save_Buffer(void * const src, const int len);
+
+    int Rcv(void *const dst, const int len);
+    int Snd(void *const src, const int len);
+
     int is_Logged_in() const;
 
     int sockfd;
     int userid;
     char ip[INET_ADDRSTRLEN + 1];
     int port;
+    int bufflen[2]; // read-0 write-1
+
 private:
-    int bufflen;
-    int buffp;
-    char *buff;
+    int buffp[2]; // read-0 write-1
+    char buff[2][MAXBUFFERLEN]; // read-0 write-1
 }
 
 class ServerSock: private ClientInfo
@@ -107,11 +125,8 @@ public:
     ~ServerSock();
 
     int Server_Start();
+
 private:
-    enum _requesttype
-    {
-        DEFAULT_REQUEST, LOG_IN, LOG_OUT, CHANGE_PASSWORD, GET_SETTINGS, CHANGE_SETTINGS, TRANSMIT_MSG
-    };
     enum _messagetpye
     {
         DEFAULT_MESSAGE, TEXT_TYPE, GRAPH_TYPE, FILE_TYPE
@@ -121,11 +136,20 @@ private:
         DEFAULT_RECEIVER, P_2_P, P_2_G, P_2_A
     };
 
+    struct CtrlPack
+    {
+        unsigned char isData;
+        unsigned char Type;
+        unsigned char isCut;
+        unsigned char Seq;
+        int Datalen;
+    };
+
     int log_in_request(ClientInfo *client);
-    int log_out_request(ClientInfo *client, list<ClientInfo>::iterator &it);
-    int get_setting_request(ClientInfo *client);
-    int is_change_setting_request(ClientInfo *client);
-    int transmit_request(ClientInfo *client);
+    int log_out_request(ClientInfo *client);
+    int change_password_request(ClientInfo *client)
+    int change_setting_request(ClientInfo *client);
+    int transmit_request(ClientInfo *client, Packet *pack);
 
     int userlist_request_to_all();
     int log_out_unexpected(ClientInfo *client);
