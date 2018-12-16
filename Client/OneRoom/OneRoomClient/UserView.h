@@ -1,31 +1,36 @@
 #pragma once
 #include <qstring.h>
-#include <qmetatype.h>
-#include <QStyledItemDelegate>
-#include <QModelIndex>
-#include <QStandardItemModel>
+#include <qwidget.h>
 
-struct UserItem
-{
-	QString nickName;
-	QString userName;
-};
-
-
-class ItemDelegate : public QStyledItemDelegate
+class UserInfo : public QWidget
 {
 	Q_OBJECT
-signals:
-
 public:
-	explicit ItemDelegate(QObject *parent = 0);
-	~ItemDelegate();
+	explicit UserInfo(QWidget *parent = nullptr);
+	UserInfo(QString nickName, QString userName, QString loginTime);
+	void operator=(const UserInfo &info);	
+	void setInfo(QString nickName, QString userName, QString loginTime);
+	QSize rectSize();
 
-	//ÖØÐ´ÖØ»­º¯Êý
-	void paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const;
-	QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
+	inline QString nickName() { return u_nickName; }
+	inline QString userName() { return u_userName; }
+	inline QString loginTime() { return u_loginTime; }
+protected:
+	void paintEvent(QPaintEvent *event);
 
 private:
+	QString u_nickName;
+	QString u_userName;
+	QString u_loginTime;
 
+	int u_nickNameW;
+	int u_userNameW;
+	int u_loginTimeW;
+	int u_lineHeight;
+	
+	QRect u_nickNameRect;
+	QRect u_iconLeftRect;
+	QRect u_iconRightRect;
+	QPixmap u_pixmap;
 };
-Q_DECLARE_METATYPE(UserItem);
+

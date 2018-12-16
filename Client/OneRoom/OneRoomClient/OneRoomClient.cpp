@@ -59,10 +59,31 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 }
 
-/* User List View */
-void OneRoomClient::setUserList()
+void OneRoomClient::on_newMsg_come(QString msg, QString sendTime)
 {
 
+}
+
+/* User List View */
+// 更新用户列表
+void OneRoomClient::updateUserList()
+{
+	UserInfo i;
+	foreach(i, userList) {	// 更新用户列表
+		UserInfo *info = new UserInfo(ui.userListWidget->parentWidget());
+		QListWidgetItem *item = new QListWidgetItem(ui.userListWidget);
+		handleUserinfo(info, item, i.nickName(), i.userName(), i.loginTime());
+	}
+}
+
+// 加载信息并添加到list中
+void OneRoomClient::handleUserinfo(UserInfo *userInfo, QListWidgetItem *item, QString nickName, QString userName, QString loginTime)
+{
+	userInfo->setFixedWidth(ui.userListWidget->width());
+	QSize size = userInfo->rectSize();
+	item->setSizeHint(size);
+	userInfo->setInfo(nickName, userName, loginTime);
+	ui.userListWidget->setItemWidget(item, userInfo);
 }
 
 /* Message View */

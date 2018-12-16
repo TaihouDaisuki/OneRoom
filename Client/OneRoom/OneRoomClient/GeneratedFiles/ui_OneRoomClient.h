@@ -12,7 +12,6 @@
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QGridLayout>
-#include <QtWidgets/QListView>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QPushButton>
@@ -28,12 +27,12 @@ public:
     QGridLayout *gridLayout;
     QPushButton *msgHistoryBtn;
     QListWidget *msgListWidget;
-    QListView *userList;
     QPushButton *sendFileBtn;
     QPushButton *sendImgBtn;
     QTextEdit *msgTextEdit;
     QPushButton *logOutBtn;
     QPushButton *sendMsgBtn;
+    QListWidget *userListWidget;
 
     void setupUi(QMainWindow *OneRoomClientClass)
     {
@@ -62,16 +61,6 @@ public:
 
         gridLayout->addWidget(msgListWidget, 0, 1, 1, 5);
 
-        userList = new QListView(centralWidget);
-        userList->setObjectName(QStringLiteral("userList"));
-        QSizePolicy sizePolicy1(QSizePolicy::Fixed, QSizePolicy::Expanding);
-        sizePolicy1.setHorizontalStretch(0);
-        sizePolicy1.setVerticalStretch(0);
-        sizePolicy1.setHeightForWidth(userList->sizePolicy().hasHeightForWidth());
-        userList->setSizePolicy(sizePolicy1);
-
-        gridLayout->addWidget(userList, 0, 0, 2, 1);
-
         sendFileBtn = new QPushButton(centralWidget);
         sendFileBtn->setObjectName(QStringLiteral("sendFileBtn"));
         sizePolicy.setHeightForWidth(sendFileBtn->sizePolicy().hasHeightForWidth());
@@ -88,11 +77,11 @@ public:
 
         msgTextEdit = new QTextEdit(centralWidget);
         msgTextEdit->setObjectName(QStringLiteral("msgTextEdit"));
-        QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        sizePolicy2.setHorizontalStretch(0);
-        sizePolicy2.setVerticalStretch(0);
-        sizePolicy2.setHeightForWidth(msgTextEdit->sizePolicy().hasHeightForWidth());
-        msgTextEdit->setSizePolicy(sizePolicy2);
+        QSizePolicy sizePolicy1(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        sizePolicy1.setHorizontalStretch(0);
+        sizePolicy1.setVerticalStretch(0);
+        sizePolicy1.setHeightForWidth(msgTextEdit->sizePolicy().hasHeightForWidth());
+        msgTextEdit->setSizePolicy(sizePolicy1);
         msgTextEdit->setBaseSize(QSize(0, 0));
 
         gridLayout->addWidget(msgTextEdit, 1, 1, 1, 5);
@@ -110,6 +99,16 @@ public:
         sendMsgBtn->setSizePolicy(sizePolicy);
 
         gridLayout->addWidget(sendMsgBtn, 2, 5, 1, 1);
+
+        userListWidget = new QListWidget(centralWidget);
+        userListWidget->setObjectName(QStringLiteral("userListWidget"));
+        QSizePolicy sizePolicy2(QSizePolicy::Fixed, QSizePolicy::Expanding);
+        sizePolicy2.setHorizontalStretch(0);
+        sizePolicy2.setVerticalStretch(0);
+        sizePolicy2.setHeightForWidth(userListWidget->sizePolicy().hasHeightForWidth());
+        userListWidget->setSizePolicy(sizePolicy2);
+
+        gridLayout->addWidget(userListWidget, 0, 0, 2, 1);
 
         OneRoomClientClass->setCentralWidget(centralWidget);
 

@@ -76,7 +76,7 @@ QSize Message::fontRect(QString str)
 	m_iconLeftRect = QRect(iconSpaceW, iconTMPH, iconWH, iconWH);
 	m_iconRightRect = QRect(this->width() - iconSpaceW - iconWH, iconTMPH, iconWH, iconWH);
 
-	QSize size = getRealString(m_msg); // 整个的size
+	QSize size = getRealString(m_msg); // 整个item的size
 
 	qDebug() << "fontRect Size:" << size;
 	int hei = size.height() < minHei ? minHei : size.height();
@@ -107,28 +107,28 @@ QSize Message::getRealString(QString src)
 	m_lineHeight = fm.lineSpacing();
 	int nCount = src.count("\n");
 	int nMaxWidth = 0;
-	if (nCount == 0) {
-		nMaxWidth = fm.width(src);
+	if (nCount == 0) {	// 没有换行
+		nMaxWidth = fm.width(src);	// 最大宽度
 		QString value = src;
 		if (nMaxWidth > m_textWidth) {
 			nMaxWidth = m_textWidth;
-			int size = m_textWidth / fm.width(" ");
-			int num = fm.width(value) / m_textWidth;
-			int ttmp = num * fm.width(" ");
-			num = (fm.width(value)) / m_textWidth;
-			nCount += num;
+			int size = m_textWidth / fm.width(" ");		// 当前宽度下，按空格填充需要的个数
+			int num = fm.width(value) / m_textWidth;	// 实际宽度按文本宽度划分行数
+			//int ttmp = num * fm.width(" ");
+			//num = (fm.width(value)) / m_textWidth;
+			nCount += num;	// 加上增加的行数
 			QString temp = "";
 			for (int i = 0; i < num; i++) {
-				temp += value.mid(i*size, (i + 1)*size) + "\n";
+				temp += value.mid(i*size, size) + "\n";	// 为新行设置换行符 temp += value.mid(i*size, (i+1)*size) + "\n";
 			}
-			src.replace(value, temp);
+			src.replace(value, temp);	// 整体替换为新串
 		}
 	}
 	else {
 		for (int i = 0; i < (nCount + 1); i++) {
-			QString value = src.split("\n").at(i);
-			nMaxWidth = fm.width(value) > nMaxWidth ? fm.width(value) : nMaxWidth;
-			if (fm.width(value) > m_textWidth) {
+			QString value = src.split("\n").at(i);	
+			nMaxWidth = fm.width(value) > nMaxWidth ? fm.width(value) : nMaxWidth;	// 记录最大宽度的字符串
+			if (fm.width(value) > m_textWidth) {	// 如果超过文本框宽度限制做换行处理
 				nMaxWidth = m_textWidth;
 				int size = m_textWidth / fm.width(" ");
 				int num = fm.width(value) / m_textWidth;
@@ -136,7 +136,7 @@ QSize Message::getRealString(QString src)
 				nCount += num;
 				QString temp = "";
 				for (int i = 0; i < num; i++) {
-					temp += value.mid(i*size, (i + 1)*size) + "\n";
+					temp += value.mid(i*size, size) + "\n";
 				}
 				src.replace(value, temp);
 			}

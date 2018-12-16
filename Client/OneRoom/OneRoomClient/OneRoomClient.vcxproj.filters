@@ -53,10 +53,10 @@
     <QtMoc Include="OneRoomClient.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="UserView.h">
+    <QtMoc Include="MessageView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="MessageView.h">
+    <QtMoc Include="UserView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

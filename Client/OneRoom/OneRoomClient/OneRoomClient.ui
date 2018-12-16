@@ -38,16 +38,6 @@
       </property>
      </widget>
     </item>
-    <item row="0" column="0" rowspan="2">
-     <widget class="QListView" name="userList">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-     </widget>
-    </item>
     <item row="2" column="3">
      <widget class="QPushButton" name="sendFileBtn">
       <property name="sizePolicy">
@@ -120,6 +110,16 @@ p, li { white-space: pre-wrap; }
       </property>
       <property name="text">
        <string>Send Message</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="0" rowspan="2">
+     <widget class="QListWidget" name="userListWidget">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
      </widget>
     </item>
