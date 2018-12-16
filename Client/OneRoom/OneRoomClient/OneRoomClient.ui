@@ -15,20 +15,7 @@
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="2" column="2">
-     <widget class="QPushButton" name="msgHistoryBtn">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="text">
-       <string>Check History</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1" colspan="5">
+    <item row="0" column="3" colspan="5">
      <widget class="QListWidget" name="msgListWidget">
       <property name="minimumSize">
        <size>
@@ -38,8 +25,8 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="3">
-     <widget class="QPushButton" name="sendFileBtn">
+    <item row="2" column="0">
+     <widget class="QPushButton" name="logOutBtn">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -47,24 +34,11 @@
        </sizepolicy>
       </property>
       <property name="text">
-       <string>Send File</string>
+       <string>Log Out</string>
       </property>
      </widget>
     </item>
-    <item row="2" column="4">
-     <widget class="QPushButton" name="sendImgBtn">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="text">
-       <string>Send Picture</string>
-      </property>
-     </widget>
-    </item>
-    <item row="1" column="1" colspan="5">
+    <item row="1" column="3" colspan="5">
      <widget class="QTextEdit" name="msgTextEdit">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -87,8 +61,8 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
-    <item row="2" column="0">
-     <widget class="QPushButton" name="logOutBtn">
+    <item row="2" column="4">
+     <widget class="QPushButton" name="msgHistoryBtn">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -96,11 +70,37 @@ p, li { white-space: pre-wrap; }
        </sizepolicy>
       </property>
       <property name="text">
-       <string>Log Out</string>
+       <string>Check History</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="6">
+     <widget class="QPushButton" name="sendImgBtn">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="text">
+       <string>Send Picture</string>
       </property>
      </widget>
     </item>
     <item row="2" column="5">
+     <widget class="QPushButton" name="sendFileBtn">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="text">
+       <string>Send File</string>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="7">
      <widget class="QPushButton" name="sendMsgBtn">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -113,13 +113,20 @@ p, li { white-space: pre-wrap; }
       </property>
      </widget>
     </item>
-    <item row="0" column="0" rowspan="2">
+    <item row="0" column="0" rowspan="2" colspan="2">
      <widget class="QListWidget" name="userListWidget">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
+     <widget class="QPushButton" name="logInButton">
+      <property name="text">
+       <string>PushButton</string>
       </property>
      </widget>
     </item>

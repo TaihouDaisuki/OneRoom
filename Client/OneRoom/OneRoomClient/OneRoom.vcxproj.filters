@@ -28,27 +28,21 @@
       <Extensions>moc;h;cpp</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="Resource Files\img">
-      <UniqueIdentifier>{5d4e6a09-850c-4975-98af-e6878f5073c6}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OneRoomClient.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Socket.cpp">
+    <ClCompile Include="OneRoom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MessageView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UserView.cpp">
+    <ClCompile Include="OneRoomClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OneRoom.cpp">
+    <ClCompile Include="UserView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TcpSocket.cpp">
@@ -56,16 +50,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="OneRoomClient.h">
+    <QtMoc Include="OneRoom.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="MessageView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="UserView.h">
+    <QtMoc Include="OneRoomClient.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="OneRoom.h">
+    <QtMoc Include="UserView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="TcpSocket.h">
@@ -73,10 +67,10 @@
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
-    <QtUic Include="OneRoomClient.ui">
+    <QtUic Include="OneRoom.ui">
       <Filter>Form Files</Filter>
     </QtUic>
-    <QtUic Include="OneRoom.ui">
+    <QtUic Include="OneRoomClient.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>
@@ -84,16 +78,5 @@
     <QtRcc Include="OneRoomClient.qrc">
       <Filter>Resource Files</Filter>
     </QtRcc>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Resources\img\Customer Copy.png">
-      <Filter>Resource Files\img</Filter>
-    </Image>
-    <Image Include="Resources\img\CustomerService.png">
-      <Filter>Resource Files\img</Filter>
-    </Image>
-    <Image Include="Resources\img\loading4.gif">
-      <Filter>Resource Files\img</Filter>
-    </Image>
   </ItemGroup>
 </Project>

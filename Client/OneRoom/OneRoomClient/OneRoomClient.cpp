@@ -5,10 +5,15 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
-
 	// connect
-	connect(ui.sendMsgBtn, SIGNAL(clicked()), this, SLOT(on_sendMsgBtn_clicked));
-} 
+	//connect(ui.sendMsgBtn, SIGNAL(clicked()), this, SLOT(on_sendMsgBtn_clicked));
+	this->tcpclient = new TcpClient;
+	connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
+	this->oneroom = new OneRoom;
+	connect(this->oneroom, &OneRoom::sendsignal, this, &OneRoomClient::reshow);
+	this->oneroom->show();
+	setWindowOpacity(0.9);
+}
 
 /* 事件处理函数 */
 void OneRoomClient::on_sendMsgBtn_clicked()
@@ -19,11 +24,18 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 	bool isSending = true;	// 发送状态
 
-	if (ui.msgListWidget->count() % 2) {	// 测试用，交换收发方
+	if(true){//if (ui.msgListWidget->count() % ) {	// 测试用，交换收发方
 		if (isSending) {
 			handleMessageTime(time);
 
 			Message* message = new Message(ui.msgListWidget->parentWidget());
+
+			//测试发送一条消息
+			Package temp = SingleText;
+			temp.DataLen = msg.toLocal8Bit().length();
+			tcpclient->OneRoomSendMessage(temp, msg.toLocal8Bit());
+
+
 			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
 			handleMessage(message, item, msg, time, Message::User_Me);
 		}
@@ -66,6 +78,7 @@ void OneRoomClient::on_newMsg_come(QString msg, QString sendTime)
 
 /* User List View */
 // 更新用户列表
+/*
 void OneRoomClient::updateUserList()
 {
 	UserInfo i;
@@ -74,7 +87,7 @@ void OneRoomClient::updateUserList()
 		QListWidgetItem *item = new QListWidgetItem(ui.userListWidget);
 		handleUserinfo(info, item, i.nickName(), i.userName(), i.loginTime());
 	}
-}
+}*/
 
 // 加载信息并添加到list中
 void OneRoomClient::handleUserinfo(UserInfo *userInfo, QListWidgetItem *item, QString nickName, QString userName, QString loginTime)
@@ -134,4 +147,37 @@ void OneRoomClient::resizeEvent(QResizeEvent *event)
 		QListWidgetItem *item = ui.msgListWidget->item(i);
 		handleMessage(message, item, message->text(), message->time(), message->userType());
 	}
+}
+
+
+void OneRoomClient::on_logInButton_clicked() {
+	this->tcpclient->Connect();
+	ui.logInButton->setEnabled(false);
+}
+
+
+
+void OneRoomClient::on_logOutBtn_clicked() {
+	this->tcpclient->DisConnect();
+	ui.logInButton->setEnabled(true);
+}
+
+void OneRoomClient::getMess(int value, char *info, int len)
+{
+	if (value == 1)
+	{
+		QString time = QString::number(QDateTime::currentDateTime().toTime_t());
+		handleMessageTime(time);
+		QString msg = QString::fromLocal8Bit(info);
+		Message* message = new Message(ui.msgListWidget->parentWidget());
+		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+		handleMessage(message, item, msg, time, Message::User_He);
+	}
+	else
+		;
+}
+
+void OneRoomClient::reshow()
+{
+	this->show();
 }
