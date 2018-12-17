@@ -36,8 +36,7 @@
 #define MD5LEN                  16
 #define MAXDATALEN              1500
 #define CTRLPACKLEN             8
-#define PACKETLEN               1508
-#define MAXBUFFERLEN            2000
+#define MAXBUFFERLEN            1520
 
 // from client
 #define LOG_IN_REQ              0x00
@@ -129,11 +128,11 @@ public:
 private:
     enum _messagetpye
     {
-        DEFAULT_MESSAGE, TEXT_TYPE, GRAPH_TYPE, FILE_TYPE
+        TEXT_TYPE, GRAPH_TYPE, FILE_TYPE
     };
     enum _sendtype
     {
-        DEFAULT_RECEIVER, P_2_P, P_2_G, P_2_A
+        P_2_P, P_2_A, P_2_G
     };
 
     struct CtrlPack
