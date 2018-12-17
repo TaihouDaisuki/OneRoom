@@ -18,7 +18,7 @@ public:
 
 	void handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type);
 	void handleMessageTime(QString curMsgTime);
-	void targetUserData(QList<QListWidgetItem *> itemList, char* data, int nCount);
+	int addTargetUserData(QList<QListWidgetItem *> &itemList, char* data, int nCount);
 
 private slots:
 	void on_sendMsgBtn_clicked();
@@ -26,6 +26,7 @@ private slots:
 
 private:
 	Ui::OneRoomClientClass ui;
+	Socket socket;
 	QList<UserInfo *> userList;	// 在线用户列表
 	UserInfo currentUser;	// 自己的用户信息
 	void resizeEvent(QResizeEvent *event); // 重载事件函数

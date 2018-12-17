@@ -26,7 +26,7 @@ int Socket::GetMessage(PackageHead *head, char *data)
 int Socket::Connect()
 {
 	this->tcpSocket = new QTcpSocket(this);
-	std::cout << "connect to " << this->ip << ":" << this->port << std::endl;
+	//std::cout << "connect to " << this->ip << ":" << this->port << std::endl;
 	tcpSocket->connectToHost(ip.c_str(), port);
 
 	// connect(tcpSocket,SIGNAL(connected()),this,SLOT(slotConnected()));
@@ -47,19 +47,19 @@ void Socket::dataReceived()
 {
 	while (tcpSocket->bytesAvailable() > 0)
 	{
-		std::cout << tcpSocket->bytesAvailable() << std::endl;
+		//std::cout << tcpSocket->bytesAvailable() << std::endl;
 		char head[64];
 		tcpSocket->read(head, 64);
 		PackageHead temp;
 		memcpy(&temp, head, 64);
-		std::cout << "IsData:" << (int)temp.isData << std::endl;
-		std::cout << "Type:" << (int)temp.type << std::endl;
-		std::cout << "IsCut:" << (int)temp.isCut << std::endl;
-		std::cout << "Seq:" << (int)temp.seq << std::endl;
-		std::cout << "Datalen:" << (int)temp.dataLen << std::endl;
+		//std::cout << "IsData:" << (int)temp.isData << std::endl;
+		//std::cout << "Type:" << (int)temp.type << std::endl;
+		//std::cout << "IsCut:" << (int)temp.isCut << std::endl;
+		//std::cout << "Seq:" << (int)temp.seq << std::endl;
+		//std::cout << "Datalen:" << (int)temp.dataLen << std::endl;
 		char temp_buf[1500];
 		tcpSocket->read(temp_buf, temp.dataLen);
-		std::cout << "getNewmessage" << std::endl;
+		//std::cout << "getNewmessage" << std::endl;
 		emit getNewmessage(1, temp_buf, temp.dataLen);
 	}
 }

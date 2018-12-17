@@ -22,14 +22,14 @@ struct PackageHead {
 	int dataLen;
 };
 
-const PackageHead SingleText = {
+const PackageHead SingleHead = {
 	1,0x00,0,0,0
 };
 
-const PackageHead AllText = {
+const PackageHead AllHead = {
 	1,0x01,0,0,0
 };
 
-const PackageHead GroupText = {
+const PackageHead GroupHead = {
 	1,0x02,0,0,0
 };

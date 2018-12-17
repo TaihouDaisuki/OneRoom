@@ -28,14 +28,16 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	QString msg = ui.msgTextEdit->toPlainText();	// 提取输入框信息
 	ui.msgTextEdit->setPlainText("");	// 清空输入框
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
-	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
 	
+	if (msg == "")	// 空消息直接返回
+		return;
+
 	// 判断数目
+	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
 	int nCount = itemList.count();
 	if (nCount < 1) {
 		// 无选择用户，提示需选择发送对象
-		QMessageBox::warning(this, tr("FBI Warning"),
-			tr("请选择发送用户"));
+		QMessageBox::warning(this, tr("FBI Warning"), tr("请选择发送用户"));
 		return;
 	}
 	
@@ -49,22 +51,35 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 		sendType = DATA_TYPE_GROUP;
 
 	// 构成数据包
+	// 添加头部
+	PackageHead head;
+	switch (sendType) {
+	case DATA_TYPE_SINGLE:
+		memcpy(&head, &SingleHead, sizeof(PackageHead));
+		break;
+	case DATA_TYPE_GROUP:
+		memcpy(&head, &GroupHead, sizeof(PackageHead));
+		break;
+	case DATA_TYPE_ALL:
+		memcpy(&head, &AllHead, sizeof(PackageHead));
+		break;
+	default:
+		QMessageBox::warning(this, tr("FBI Warning"), tr("add message head error"));
+		return;
+	}
+
+	// 添加数据
 	QByteArray msgByteArray = msg.toLocal8Bit();	// 转为编码格式
 	int dataSize = ((nCount + 1) * USERNAME_BUFF_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
-	char* package = new(std::nothrow) char[PACKAGE_HEAD_SIZE + dataSize];
-	
-	// 添加头部
-	switch (sendType) {
-		case DATA_TYPE_SINGLE:
-			break;
-		case DATA_TYPE_GROUP:
-			break;
-		case DATA_TYPE_ALL:
-			break;
+	char* data = new(std::nothrow) char[dataSize];
+	if (data == NULL) {
+		QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+		return;
 	}
-	// 添加数据
+	int length = addTargetUserData(itemList, data, nCount);
+	
 
-	// 发送
+	// 发送package
 	bool isSending = true;	// 发送状态
 
 	if (isSending) {
@@ -73,48 +88,56 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 		Message* message = new Message(ui.msgListWidget->parentWidget());
 		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
 		handleMessage(message, item, msg, time, Message::User_Me);
-	}
-	else {
-		bool isOver = true;
-		for (int i = ui.msgListWidget->count() - 1; i > 0; i--) {
-			Message* message = (Message*)ui.msgListWidget->itemWidget(ui.msgListWidget->item(i));	// 当前选取的消息
-			if (message->text() == msg) {	// 处理刚发送的消息
-				isOver = false;
-				message->setTextSuccess();
-			}
-		}
-		if (isOver) {	// 
-			handleMessageTime(time);
-
-			Message* message = new Message(ui.msgListWidget->parentWidget());
-			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-			handleMessage(message, item, msg, time, Message::User_Me);
+		// 调用send函数
+		int ret = socket.SendMessage(head, data);
+		if(ret)	// 设置发送成功
 			message->setTextSuccess();
-		}
 	}
+	//else {
+	//	bool isOver = true;
+	//	for (int i = ui.msgListWidget->count() - 1; i > 0; i--) {
+	//		Message* message = (Message*)ui.msgListWidget->itemWidget(ui.msgListWidget->item(i));	// 当前选取的消息
+	//		if (message->text() == msg) {	// 处理刚发送的消息
+	//			isOver = false;
+	//			message->setTextSuccess();
+	//		}
+	//	}
+	//	if (isOver) {	// 
+	//		handleMessageTime(time);
+
+	//		Message* message = new Message(ui.msgListWidget->parentWidget());
+	//		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+	//		handleMessage(message, item, msg, time, Message::User_Me);
+	//	}
+	//}
 	
 	//清空临时条目列表
 	itemList.clear();
 	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
 }
 
-// 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从目标地址开始填入
-void OneRoomClient::targetUserData(QList<QListWidgetItem *> itemList, char* data, int nCount)
+// 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从data指向地址开始填入, 返回填入长度
+int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* data, int nCount)
 {
 	//char* data = new char[(nCount + 1) * USERNAME_BUFF_SIZE];
 	UserInfo *user;
 	QByteArray userNameByteArray;
+	int length = 0;
 
 	for (int i = 0; i < nCount; i++) {
 		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[i]);
 		// QString to GBK char*
 		userNameByteArray = user->userName().toLocal8Bit();
 		memcpy(&data[i * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
+		length += USERNAME_BUFF_SIZE;
 	}
 
 	// 添加当前用户名称
 	userNameByteArray = currentUser.userName().toLocal8Bit();
 	memcpy(&data[nCount * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
+	length += USERNAME_BUFF_SIZE;
+
+	return length;
 }
 
 
