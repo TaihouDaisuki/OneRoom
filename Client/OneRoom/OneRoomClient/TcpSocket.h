@@ -6,26 +6,7 @@
 #include <string>
 #include <iostream>
 #include <string.h>
-
-struct Package {
-	unsigned char IsData;
-	unsigned char Type;
-	unsigned char IsCut;
-	unsigned char Seq;
-	int DataLen;
-};
-
-const Package SingleText = {
-	1,0x00,0,0,0
-};
-
-const Package AllText = {
-	1,0x01,0,0,0
-};
-
-const Package GroupText = {
-	1,0x02,0,0,0
-};
+#include "Define.h"
 
 
 class TcpClient:public QDialog
@@ -38,8 +19,8 @@ public:
 	std::string ip;
 	int port;
 	QTcpSocket *tcpSocket;
-	int OneRoomSendMessage(Package pack, const char * data);
-	int GetMessage(Package *pack, char *data);
+	int OneRoomSendMessage(PackageHead pack, const char * data);
+	int GetMessage(PackageHead *pack, char *data);
 	int Connect();
 	int DisConnect();
 private:

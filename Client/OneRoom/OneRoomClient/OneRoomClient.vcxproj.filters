@@ -96,4 +96,9 @@
       <Filter>Resource Files\img</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Define.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

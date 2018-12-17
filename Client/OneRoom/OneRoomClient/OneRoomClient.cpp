@@ -8,9 +8,14 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	// connect
 	//connect(ui.sendMsgBtn, SIGNAL(clicked()), this, SLOT(on_sendMsgBtn_clicked));
 	this->tcpclient = new TcpClient;
-	connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
+	//connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
+
 	this->oneroom = new OneRoom;
+	this->oneroom->tcpclient = this->tcpclient;
 	connect(this->oneroom, &OneRoom::sendsignal, this, &OneRoomClient::reshow);
+	connect(this->tcpclient, &TcpClient::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
+
+
 	this->oneroom->show();
 	setWindowOpacity(0.9);
 }
@@ -31,7 +36,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 			Message* message = new Message(ui.msgListWidget->parentWidget());
 
 			//测试发送一条消息
-			Package temp = SingleText;
+			PackageHead temp = SingleText;
 			temp.DataLen = msg.toLocal8Bit().length();
 			tcpclient->OneRoomSendMessage(temp, msg.toLocal8Bit());
 
@@ -180,4 +185,6 @@ void OneRoomClient::getMess(int value, char *info, int len)
 void OneRoomClient::reshow()
 {
 	this->show();
+	connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
+	disconnect(this->tcpclient, &TcpClient::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
 }

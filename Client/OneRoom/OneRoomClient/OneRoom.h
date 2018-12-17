@@ -10,6 +10,20 @@
 #include <objidl.h> // Fixes error C2504: 'IUnknown' : base class undefined 
 #include <gdiplus.h> 
 #include <GdiPlusColor.h> 
+#include <QWidget>
+#include <QGraphicsBlurEffect>
+#include <QGraphicsPixmapItem>
+#include <QPaintEvent>
+#include <QPainter>
+#include <QTimer>
+#include <QDebug>
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QEvent>
+#include <QMouseEvent>
+#include <QMessageBox>
+#include <QtWinExtras>
+#include "Define.h"
 #pragma comment (lib,"Dwmapi.lib") // Adds missing library, fixes error LNK2019: unresolved external symbol __imp__DwmExtendFrameIntoClientArea 
 #pragma comment (lib,"user32.lib")
 #include "TcpSocket.h"
@@ -27,7 +41,8 @@ private:
 	Ui::OneRoomClass ui;
 private slots:
 	void on_pushButton_clicked();
-
+public slots:
+	void ReceivePack(int value, char *info, int len);
 
 signals:
 	void sendsignal();

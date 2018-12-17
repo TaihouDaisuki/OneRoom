@@ -37,13 +37,13 @@ public:
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
         lineEdit = new QLineEdit(centralWidget);
         lineEdit->setObjectName(QStringLiteral("lineEdit"));
-        lineEdit->setGeometry(QRect(30, 210, 221, 31));
+        lineEdit->setGeometry(QRect(30, 190, 221, 31));
         lineEdit_2 = new QLineEdit(centralWidget);
         lineEdit_2->setObjectName(QStringLiteral("lineEdit_2"));
-        lineEdit_2->setGeometry(QRect(30, 260, 171, 31));
+        lineEdit_2->setGeometry(QRect(30, 240, 171, 31));
         pushButton = new QPushButton(centralWidget);
         pushButton->setObjectName(QStringLiteral("pushButton"));
-        pushButton->setGeometry(QRect(210, 260, 41, 31));
+        pushButton->setGeometry(QRect(210, 240, 41, 31));
         label = new QLabel(centralWidget);
         label->setObjectName(QStringLiteral("label"));
         label->setGeometry(QRect(80, 40, 151, 131));
