@@ -1,9 +1,11 @@
 #pragma once
 
 #include <QtWidgets/QMainWindow>
+#include <QTextCodec>
 #include "ui_OneRoomClient.h"
 #include "UserView.h"
 #include "MessageView.h"
+#include "define.h"
 
 class OneRoomClient : public QMainWindow
 {
@@ -16,6 +18,7 @@ public:
 
 	void handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type);
 	void handleMessageTime(QString curMsgTime);
+	void targetUserData(QList<QListWidgetItem *> itemList, char* data, int nCount);
 
 private slots:
 	void on_sendMsgBtn_clicked();
@@ -24,6 +27,6 @@ private slots:
 private:
 	Ui::OneRoomClientClass ui;
 	QList<UserInfo *> userList;	// 在线用户列表
-	// 重载事件函数
-	void resizeEvent(QResizeEvent *event);
+	UserInfo currentUser;	// 自己的用户信息
+	void resizeEvent(QResizeEvent *event); // 重载事件函数
 };
