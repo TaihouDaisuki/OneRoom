@@ -41,8 +41,9 @@ void OneRoom::on_pushButton_clicked()
 	}
 
 	PackageHead temp = SendTest;
-	temp.Type = _SERVER_RETURN_CORRECT;
-	temp.DataLen = 40;
+	temp.isData = 0;
+	temp.type = 0x01;
+	temp.dataLen = 40;
 	char ch[40];
 	memset(ch, 0, sizeof(ch));
 	memcpy(ch, username.toLocal8Bit(),username.toLocal8Bit().length());
@@ -50,31 +51,26 @@ void OneRoom::on_pushButton_clicked()
 
 
 
-	this->tcpclient->OneRoomSendMessage(temp, ch);
+	this->tcpclient->Send(temp, ch);
 	ui.pushButton->setEnabled(false);
 	return;
 }
 
 
 
-void OneRoom::ReceivePack(int value, char *info, int len)
+void OneRoom::ReceivePack(PackageHead head, char *info)
 {
-	if (value == _MESSAGE_IS_CORRECT)
+	if (head.isData == 1)
 	{
-		this->hide();
-		emit sendsignal();
+		return;
 	}
-	else if (value == _MESSAGE_IS_ERROR_CON)
+	else
 	{
-		if (info[0] == 0x00)
+		if (head.type == SERVER_RETURN_CORRECT)
 		{
-			;
-		}//发送错误但保持连接
+			this->hide();
+			emit sendsignal();
+		}
 	}
-	else if (value == _MESSAGE_IS_ERROR_DIS)
-	{
-		this->tcpclient->DisConnect();;//发送错误且断开连接
-		ui.pushButton->setEnabled(true);
-
-	}
+	return;
 }

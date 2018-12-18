@@ -29,7 +29,7 @@ public slots:
 	void dataReceived();
 
 signals:
-	void getNewmessage(int type,char *info,int len);
+	void getNewmessage(PackageHead pack,char *info);
 
 };
 

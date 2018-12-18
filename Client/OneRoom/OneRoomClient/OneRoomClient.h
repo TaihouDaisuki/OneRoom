@@ -6,7 +6,7 @@
 #include "UserView.h"
 #include "MessageView.h"
 #include "define.h"
-#include "TcpSocket.h"
+#include "Socket.h"
 #include "OneRoom.h"
 
 class OneRoomClient : public QMainWindow
@@ -15,7 +15,7 @@ class OneRoomClient : public QMainWindow
 
 public:
 	OneRoomClient(QWidget *parent = Q_NULLPTR);
-	//void updateUserList();
+	void updateUserList();
 	void handleUserinfo(UserInfo *userInfo, QListWidgetItem *item, QString nickName, QString userName, QString loginTime);
 
 	void handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type);
@@ -23,11 +23,11 @@ public:
 	void targetUserData(QList<QListWidgetItem *> itemList, char* data, int nCount);
 
 	
-	TcpClient *tcpclient;
+	Socket *tcpclient;
 	OneRoom *oneroom;
 private slots:
 	void on_sendMsgBtn_clicked();
-	void on_logInButton_clicked();
+	//void on_logInButton_clicked();
 	void on_newMsg_come(QString msg, QString sendTime);
 	void on_logOutBtn_clicked();
 
@@ -35,7 +35,7 @@ private slots:
 	void reshow();
 
 public slots:
-	void getMess(int value,char *info,int len);
+	void OneRoomClient::getMess(PackageHead head, char *info);
 
 private:
 	Ui::OneRoomClientClass ui;

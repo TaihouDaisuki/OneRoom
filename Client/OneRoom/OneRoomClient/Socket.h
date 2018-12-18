@@ -2,8 +2,10 @@
 #include <QHostAddress>
 #include <QTcpSocket>
 #include <QDialog>
+#include <string>
+#include <iostream>
 #include <string.h>
-#include "define.h"
+#include "Define.h"
 
 class Socket :public QDialog
 {
@@ -15,7 +17,7 @@ public:
 	std::string ip;
 	int port;
 	QTcpSocket *tcpSocket;
-	int SendMessage(PackageHead head, const char * data);	// 
+	int Send(PackageHead head, const char * data);	// 
 	int GetMessage(PackageHead *head, char *data);
 	int Connect();
 	int DisConnect();
@@ -25,6 +27,6 @@ public slots:
 	void dataReceived();
 
 signals:
-	void getNewmessage(int type, char *info, int len);
+	void getNewmessage(PackageHead type, char *info);
 
 };

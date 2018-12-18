@@ -20,13 +20,13 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	updateUserList();
 	// connect
 	//connect(ui.sendMsgBtn, SIGNAL(clicked()), this, SLOT(on_sendMsgBtn_clicked));
-	this->tcpclient = new TcpClient;
+	this->tcpclient = new Socket;
 	//connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
 
 	this->oneroom = new OneRoom;
 	this->oneroom->tcpclient = this->tcpclient;
 	connect(this->oneroom, &OneRoom::sendsignal, this, &OneRoomClient::reshow);
-	connect(this->tcpclient, &TcpClient::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
+	connect(this->tcpclient, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
 
 
 	this->oneroom->show();
@@ -40,7 +40,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	ui.msgTextEdit->setPlainText("");	// 清空输入框
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
-	
+
 	// 判断数目
 	int nCount = itemList.count();
 	if (nCount < 1) {
@@ -49,7 +49,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 			tr("请选择发送用户"));
 		return;
 	}
-	
+
 	// 判断消息发送方式
 	unsigned char sendType = 0;
 	if (nCount == ui.userListWidget->count())
@@ -63,22 +63,22 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	QByteArray msgByteArray = msg.toLocal8Bit();	// 转为编码格式
 	int dataSize = ((nCount + 1) * USERNAME_BUFF_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
 	char* package = new(std::nothrow) char[PACKAGE_HEAD_SIZE + dataSize];
-	
+
 	// 添加头部
 	switch (sendType) {
-		case DATA_TYPE_SINGLE:
-			break;
-		case DATA_TYPE_GROUP:
-			break;
-		case DATA_TYPE_ALL:
-			break;
+	case DATA_TYPE_SINGLE:
+		break;
+	case DATA_TYPE_GROUP:
+		break;
+	case DATA_TYPE_ALL:
+		break;
 	}
 	// 添加数据
 
 	// 发送
 	bool isSending = true;	// 发送状态
 
-	if(true){//if (ui.msgListWidget->count() % ) {	// 测试用，交换收发方
+	if (true) {//if (ui.msgListWidget->count() % ) {	// 测试用，交换收发方
 		if (isSending) {
 			handleMessageTime(time);
 
@@ -86,8 +86,8 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 			//测试发送一条消息
 			PackageHead temp = SingleText;
-			temp.DataLen = msg.toLocal8Bit().length();
-			tcpclient->OneRoomSendMessage(temp, msg.toLocal8Bit());
+			temp.dataLen = msg.toLocal8Bit().length();
+			tcpclient->Send(temp, msg.toLocal8Bit());
 
 
 			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
@@ -105,36 +105,36 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 			if (isOver) {
 				handleMessageTime(time);
 
-			Message* message = new Message(ui.msgListWidget->parentWidget());
-			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-			handleMessage(message, item, msg, time, Message::User_Me);
-			message->setTextSuccess();
+				Message* message = new Message(ui.msgListWidget->parentWidget());
+				QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+				handleMessage(message, item, msg, time, Message::User_Me);
+				message->setTextSuccess();
+			}
 		}
+
+		//清空临时条目列表
+		itemList.clear();
+		ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
 	}
-	
-	//清空临时条目列表
-	itemList.clear();
-	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
 }
+	// 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从目标地址开始填入
+	void OneRoomClient::targetUserData(QList<QListWidgetItem *> itemList, char* data, int nCount)
+	{
+		//char* data = new char[(nCount + 1) * USERNAME_BUFF_SIZE];
+		UserInfo *user;
+		QByteArray userNameByteArray;
 
-// 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从目标地址开始填入
-void OneRoomClient::targetUserData(QList<QListWidgetItem *> itemList, char* data, int nCount)
-{
-	//char* data = new char[(nCount + 1) * USERNAME_BUFF_SIZE];
-	UserInfo *user;
-	QByteArray userNameByteArray;
+		for (int i = 0; i < nCount; i++) {
+			user = (UserInfo *)ui.userListWidget->itemWidget(itemList[i]);
+			// QString to GBK char*
+			userNameByteArray = user->userName().toLocal8Bit();
+			memcpy(&data[i * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
+		}
 
-	for (int i = 0; i < nCount; i++) {
-		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[i]);
-		// QString to GBK char*
-		userNameByteArray = user->userName().toLocal8Bit();
-		memcpy(&data[i * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
+		// 添加当前用户名称
+		userNameByteArray = currentUser.userName().toLocal8Bit();
+		memcpy(&data[nCount * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
 	}
-
-	// 添加当前用户名称
-	userNameByteArray = currentUser.userName().toLocal8Bit();
-	memcpy(&data[nCount * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
-}
 
 
 void OneRoomClient::on_newMsg_come(QString msg, QString sendTime)
@@ -144,7 +144,7 @@ void OneRoomClient::on_newMsg_come(QString msg, QString sendTime)
 
 /* User List View */
 // 更新用户列表
-/*
+
 void OneRoomClient::updateUserList()
 {
 	UserInfo *i;
@@ -153,7 +153,7 @@ void OneRoomClient::updateUserList()
 		QListWidgetItem *item = new QListWidgetItem(ui.userListWidget);
 		handleUserinfo(info, item, i->nickName(), i->userName(), i->loginTime());
 	}
-}*/
+}
 
 // 加载信息并添加到list中
 void OneRoomClient::handleUserinfo(UserInfo *userInfo, QListWidgetItem *item, QString nickName, QString userName, QString loginTime)
@@ -175,7 +175,7 @@ void OneRoomClient::handleMessage(Message *message, QListWidgetItem *item, QStri
 	QSize size = message->fontRect(text);	// 获取文本框大小
 	item->setSizeHint(size);	// 设置尺寸
 	message->setText(text, time, size, type);
-	ui.msgListWidget->setItemWidget(item, message);	
+	ui.msgListWidget->setItemWidget(item, message);
 }
 
 // 处理消息时间
@@ -218,21 +218,15 @@ void OneRoomClient::resizeEvent(QResizeEvent *event)
 }
 
 
-void OneRoomClient::on_logInButton_clicked() {
-	this->tcpclient->Connect();
-	ui.logInButton->setEnabled(false);
-}
-
-
 
 void OneRoomClient::on_logOutBtn_clicked() {
 	this->tcpclient->DisConnect();
-	ui.logInButton->setEnabled(true);
+	
 }
 
-void OneRoomClient::getMess(int value, char *info, int len)
+void OneRoomClient::getMess(PackageHead head, char *info)
 {
-	if (value == 1)
+	if (head.isData == 1)
 	{
 		QString time = QString::number(QDateTime::currentDateTime().toTime_t());
 		handleMessageTime(time);
@@ -248,6 +242,6 @@ void OneRoomClient::getMess(int value, char *info, int len)
 void OneRoomClient::reshow()
 {
 	this->show();
-	connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
-	disconnect(this->tcpclient, &TcpClient::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
+	connect(this->tcpclient, &Socket::getNewmessage, this, &OneRoomClient::getMess);
+	disconnect(this->tcpclient, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
 }

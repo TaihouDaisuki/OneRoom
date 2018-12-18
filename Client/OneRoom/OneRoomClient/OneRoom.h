@@ -4,7 +4,6 @@
 #include "ui_OneRoom.h"
 #include <QMouseEvent>
 #include <windows.h> 
-#include <WinUser.h>
 #include <windowsx.h> 
 #include <dwmapi.h> 
 #include <objidl.h> // Fixes error C2504: 'IUnknown' : base class undefined 
@@ -26,7 +25,7 @@
 #include "Define.h"
 #pragma comment (lib,"Dwmapi.lib") // Adds missing library, fixes error LNK2019: unresolved external symbol __imp__DwmExtendFrameIntoClientArea 
 #pragma comment (lib,"user32.lib")
-#include "TcpSocket.h"
+#include "Socket.h"
 
 
 class OneRoom : public QMainWindow
@@ -35,14 +34,14 @@ class OneRoom : public QMainWindow
 
 public:
 	OneRoom(QWidget *parent = Q_NULLPTR);
-	TcpClient *tcpclient;
+	Socket *tcpclient;
 private:
 	
 	Ui::OneRoomClass ui;
 private slots:
 	void on_pushButton_clicked();
 public slots:
-	void ReceivePack(int value, char *info, int len);
+	void ReceivePack(PackageHead value, char *info);
 
 signals:
 	void sendsignal();
