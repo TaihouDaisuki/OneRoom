@@ -66,7 +66,7 @@ void UserInfo::paintEvent(QPaintEvent *event)
 	painter.drawPixmap(u_iconLeftRect, u_pixmap);
 	// ÎÄ×Ö
 	QPen penText;
-	penText.setColor(Qt::GlobalColor::black);
+	penText.setColor(Qt::GlobalColor::white);
 	painter.setPen(penText);
 	QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
 	option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);

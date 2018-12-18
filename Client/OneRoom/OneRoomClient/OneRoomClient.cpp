@@ -14,7 +14,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	ui.msgTextEdit->setFontFamily("MicrosoftYaHei");
 	ui.msgTextEdit->setFontPointSize(12);
 	ui.msgTextEdit->installEventFilter(this);
-
+	this->setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
 	// test
 	userList.append(new UserInfo("Megumi", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
 	userList.append(new UserInfo(QString::fromLocal8Bit("测试"), "test", QString::number(QDateTime::currentDateTime().toTime_t())));
@@ -51,7 +51,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	int nCount = itemList.count();
 	if (nCount < 1) {
 		// 无选择用户，提示需选择发送对象
-		QMessageBox::warning(this, tr("FBI Warning"), tr("请选择发送用户"));
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
 		return;
 	}
 

@@ -76,6 +76,9 @@
     <QtUic Include="OneRoom.ui">
       <Filter>Form Files</Filter>
     </QtUic>
+    <QtUic Include="SettingBoard.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="OneRoomClient.qrc">

@@ -135,6 +135,7 @@
   <ItemGroup>
     <QtUic Include="OneRoom.ui" />
     <QtUic Include="OneRoomClient.ui" />
+    <QtUic Include="SettingBoard.ui" />
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="OneRoomClient.qrc" />
