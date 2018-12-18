@@ -10,10 +10,16 @@ Socket::Socket(QWidget *parent, Qt::WindowFlags f)
 
 int Socket::Send(PackageHead head, const char * data)
 {
-	char buf[1500];
-	memcpy(buf, &head, 64);
-	memcpy(buf + 64, data, head.dataLen);
-	tcpSocket->write(buf, head.dataLen + 64);
+	/*char* buf;
+	memcpy(buf, &head, sizeof(PackageHead));
+	
+	if (data)
+		memcpy(buf + sizeof(PackageHead), data, head.dataLen);*/
+	
+	tcpSocket->write((char*)&head, sizeof(PackageHead));
+	if (data)
+		tcpSocket->write(data, head.dataLen);
+
 	return 0;
 }
 
