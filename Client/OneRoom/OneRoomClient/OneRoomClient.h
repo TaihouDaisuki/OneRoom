@@ -10,6 +10,7 @@
 #include <qevent.h>
 #include "Socket.h"
 #include "OneRoom.h"
+#include <qqueue.h>
 
 class OneRoomClient : public QMainWindow
 {
@@ -42,6 +43,7 @@ private:
 	Ui::OneRoomClientClass ui;
 	Socket socket;
 	QList<UserInfo *> userList;	// 在线用户列表
+	QQueue<Message *> sendMsgQueue;	// 发送消息队列，用于服务端确认处理
 	UserInfo currentUser;	// 自己的用户信息
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
 	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器

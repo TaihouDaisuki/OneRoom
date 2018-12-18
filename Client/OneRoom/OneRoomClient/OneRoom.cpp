@@ -66,7 +66,7 @@ void OneRoom::ReceivePack(PackageHead head, char *info)
 	}
 	else
 	{
-		if (head.type == SERVER_RETURN_CORRECT)
+		if (head.type == SERVER_ACK)
 		{
 			this->hide();
 			emit sendsignal();

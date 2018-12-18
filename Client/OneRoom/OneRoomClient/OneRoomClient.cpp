@@ -66,7 +66,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 	// 构成数据包
 	QByteArray msgByteArray = msg.toLocal8Bit();	// 转为编码格式
-	int dataSize = ((nCount + 1) * USERNAME_BUFF_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
+	int dataSize = ((nCount + 1) * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
 	// 添加头部
 	PackageHead head;
 	switch (sendType) {
@@ -106,9 +106,8 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
 			handleMessage(message, item, msg, time, Message::User_Me);
 			// 调用send函数
-			int ret = socket.Send(head, data);
-			if (ret)	// 设置发送成功(异步判断？)
-				message->setTextSuccess();
+			socket.Send(head, data);
+			sendMsgQueue.push_back(message);
 		}
 		//else {
 		//	bool isOver = true;
@@ -134,6 +133,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	}
 
 }
+
 void OneRoomClient::on_sendFileBtn_clicked()
 {
 	//定义文件对话框类
@@ -188,32 +188,69 @@ int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* d
 		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[i]);
 		// QString to GBK char*
 		userNameByteArray = user->userName().toLocal8Bit();
-		memcpy(&data[i * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
-		length += USERNAME_BUFF_SIZE;
+		memcpy(&data[i * MAX_USERNAME_SIZE], userNameByteArray.data(), MAX_USERNAME_SIZE);
+		length += MAX_USERNAME_SIZE;
 	}
 
 	// 添加当前用户名称
 	userNameByteArray = currentUser.userName().toLocal8Bit();
-	memcpy(&data[nCount * USERNAME_BUFF_SIZE], userNameByteArray.data(), USERNAME_BUFF_SIZE);
-	length += USERNAME_BUFF_SIZE;
+	memcpy(&data[nCount * MAX_USERNAME_SIZE], userNameByteArray.data(), MAX_USERNAME_SIZE);
+	length += MAX_USERNAME_SIZE;
 
 	return length;
 }
 
 void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 {
-	// 包处理
+	// 数据
 	if (head.isData == 1)
 	{
-		QString time = QString::number(QDateTime::currentDateTime().toTime_t());
-		handleMessageTime(time);
-		QString msg = QString::fromLocal8Bit(data + 40);
-		Message* message = new Message(ui.msgListWidget->parentWidget());
-		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-		handleMessage(message, item, msg, time, Message::User_He);
+		switch (head.type) {
+			case SERVER_ACK:
+				// 收到消息确认包，确认消息发送成功
+				Message *message;
+				message = sendMsgQueue.front();
+				sendMsgQueue.pop_front();
+				message->setTextSuccess();
+				break;
+			case SERVER_RETURN_SETTING:
+				// 确认登陆成功
+				break;
+			case SERVER_RETURN_ERROR_C:
+				if (data[0] == SEND_MESSAGE_FAIL) {
+					// 发送消息失败
+				}
+				else if (data[0] == PASSWORD_ERROR) {
+					// 改密码失败，原密码错误
+				}
+				else {
+
+				}
+				break;
+			case SERVER_RETUEN_ERROR_D:
+				if (data[0] == ENFORCE_OFFLINE) {
+					// 强制下线
+
+				}
+				else {
+
+				}
+				break;
+			case SERVER_RETURN_USERLIST:
+				// 更新用户列表
+
+				break;
+			default:
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+				return;
+		}
 	}
+	// 控制
 	else
-		;
+	{
+
+	}
+		
 }
 
 /* User List View */
@@ -279,7 +316,6 @@ void OneRoomClient::handleMessageTime(QString curMsgTime)
 
 }
 
-
 /* reload event function */
 void OneRoomClient::resizeEvent(QResizeEvent *event)
 {
@@ -291,7 +327,6 @@ void OneRoomClient::resizeEvent(QResizeEvent *event)
 		handleMessage(message, item, message->text(), message->time(), message->userType());
 	}
 }
-
 
 bool OneRoomClient::eventFilter(QObject *obj, QEvent *e)
 {
@@ -308,14 +343,10 @@ bool OneRoomClient::eventFilter(QObject *obj, QEvent *e)
 	return false;
 }
 
-
-
-
 void OneRoomClient::on_logOutBtn_clicked() {
 	this->socket.DisConnect();
 
 }
-
 
 void OneRoomClient::reshow_mainwindow()
 {
