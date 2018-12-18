@@ -17,7 +17,7 @@ int Socket::Send(PackageHead head, const char * data)
 		memcpy(buf + sizeof(PackageHead), data, head.dataLen);*/
 	
 	tcpSocket->write((char*)&head, sizeof(PackageHead));
-	if (data)
+	if (data!=NULL)
 		tcpSocket->write(data, head.dataLen);
 
 	return 0;

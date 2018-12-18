@@ -25,7 +25,6 @@ public:
 	int addTargetUserData(QList<QListWidgetItem *> &itemList, char* data, int nCount);
 
 	
-	Socket *tcpclient;
 	OneRoom *oneroom;
 private slots:
 	void on_sendMsgBtn_clicked();
@@ -34,7 +33,7 @@ private slots:
 	void on_logOutBtn_clicked();
 	void on_package_arrived(PackageHead head, char* data);
 
-	void reshow();
+	void reshow_mainwindow();
 
 public slots:
 	void OneRoomClient::getMess(PackageHead head, char *info);

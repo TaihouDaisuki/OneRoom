@@ -19,17 +19,17 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	userList.append(new UserInfo("Megumi", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
 	userList.append(new UserInfo(QString::fromLocal8Bit("测试"), "test", QString::number(QDateTime::currentDateTime().toTime_t())));
 	userList.append(new UserInfo("1234567890", "number", QString::number(QDateTime::currentDateTime().toTime_t())));
-	
+
 	updateUserList();
 	// connect
 	//connect(ui.sendMsgBtn, SIGNAL(clicked()), this, SLOT(on_sendMsgBtn_clicked));
-	this->tcpclient = new Socket;
+	//this->tcpclient = new Socket;
 	//connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
 
 	this->oneroom = new OneRoom;
-	this->oneroom->tcpclient = this->tcpclient;
-	connect(this->oneroom, &OneRoom::sendsignal, this, &OneRoomClient::reshow);
-	connect(this->tcpclient, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
+	this->oneroom->tcpclient = &this->socket;
+	connect(this->oneroom, &OneRoom::sendsignal, this, &OneRoomClient::reshow_mainwindow);
+	connect(&this->socket, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
 
 
 	this->oneroom->show();
@@ -42,7 +42,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	QString msg = ui.msgTextEdit->toPlainText();	// 提取输入框信息
 	ui.msgTextEdit->setPlainText("");	// 清空输入框
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
-	
+
 	if (msg == "")	// 空消息直接返回
 		return;
 
@@ -102,37 +102,38 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 		if (isSending) {
 			handleMessageTime(time);
 
-		Message* message = new Message(ui.msgListWidget->parentWidget());
-		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-		handleMessage(message, item, msg, time, Message::User_Me);
-		// 调用send函数
-		int ret = socket.SendMessage(head, data);
-		if(ret)	// 设置发送成功(异步判断？)
-			message->setTextSuccess();
+			Message* message = new Message(ui.msgListWidget->parentWidget());
+			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+			handleMessage(message, item, msg, time, Message::User_Me);
+			// 调用send函数
+			int ret = socket.Send(head, data);
+			if (ret)	// 设置发送成功(异步判断？)
+				message->setTextSuccess();
+		}
+		//else {
+		//	bool isOver = true;
+		//	for (int i = ui.msgListWidget->count() - 1; i > 0; i--) {
+		//		Message* message = (Message*)ui.msgListWidget->itemWidget(ui.msgListWidget->item(i));	// 当前选取的消息
+		//		if (message->text() == msg) {	// 处理刚发送的消息
+		//			isOver = false;
+		//			message->setTextSuccess();
+		//		}
+		//	}
+		//	if (isOver) {	// 
+		//		handleMessageTime(time);
+
+		//		Message* message = new Message(ui.msgListWidget->parentWidget());
+		//		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+		//		handleMessage(message, item, msg, time, Message::User_Me);
+		//	}
+		//}
+
+		//清空临时条目列表
+		itemList.clear();
+		ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
 	}
-	//else {
-	//	bool isOver = true;
-	//	for (int i = ui.msgListWidget->count() - 1; i > 0; i--) {
-	//		Message* message = (Message*)ui.msgListWidget->itemWidget(ui.msgListWidget->item(i));	// 当前选取的消息
-	//		if (message->text() == msg) {	// 处理刚发送的消息
-	//			isOver = false;
-	//			message->setTextSuccess();
-	//		}
-	//	}
-	//	if (isOver) {	// 
-	//		handleMessageTime(time);
 
-	//		Message* message = new Message(ui.msgListWidget->parentWidget());
-	//		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-	//		handleMessage(message, item, msg, time, Message::User_Me);
-	//	}
-	//}
-	
-	//清空临时条目列表
-	itemList.clear();
-	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
 }
-
 void OneRoomClient::on_sendFileBtn_clicked()
 {
 	//定义文件对话框类
@@ -175,11 +176,6 @@ void OneRoomClient::on_sendImgBtn_clicked()
 
 }
 
-void OneRoomClient::on_logOutBtn_clicked()
-{
-
-}
-
 // 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从data指向地址开始填入, 返回填入长度
 int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* data, int nCount)
 {
@@ -207,6 +203,17 @@ int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* d
 void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 {
 	// 包处理
+	if (head.isData == 1)
+	{
+		QString time = QString::number(QDateTime::currentDateTime().toTime_t());
+		handleMessageTime(time);
+		QString msg = QString::fromLocal8Bit(data + 40);
+		Message* message = new Message(ui.msgListWidget->parentWidget());
+		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+		handleMessage(message, item, msg, time, Message::User_He);
+	}
+	else
+		;
 }
 
 /* User List View */
@@ -272,6 +279,7 @@ void OneRoomClient::handleMessageTime(QString curMsgTime)
 
 }
 
+
 /* reload event function */
 void OneRoomClient::resizeEvent(QResizeEvent *event)
 {
@@ -299,33 +307,19 @@ bool OneRoomClient::eventFilter(QObject *obj, QEvent *e)
 	}
 	return false;
 }
-}
+
 
 
 
 void OneRoomClient::on_logOutBtn_clicked() {
-	this->tcpclient->DisConnect();
-	
+	this->socket.DisConnect();
+
 }
 
-void OneRoomClient::getMess(PackageHead head, char *info)
-{
-	if (head.isData == 1)
-	{
-		QString time = QString::number(QDateTime::currentDateTime().toTime_t());
-		handleMessageTime(time);
-		QString msg = QString::fromLocal8Bit(info);
-		Message* message = new Message(ui.msgListWidget->parentWidget());
-		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-		handleMessage(message, item, msg, time, Message::User_He);
-	}
-	else
-		;
-}
 
-void OneRoomClient::reshow()
+void OneRoomClient::reshow_mainwindow()
 {
 	this->show();
-	connect(this->tcpclient, &Socket::getNewmessage, this, &OneRoomClient::getMess);
-	disconnect(this->tcpclient, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
+	connect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
+	disconnect(&this->socket, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
 }
