@@ -14,6 +14,14 @@
 #define CONTROL_TYPE_CLIENT_CHANGE 0x00
 
 
+#define SERVER_RETURN_CORRECT 0x01
+#define SERVER_RETURN_SETTING 0x09
+#define SERVER_RETURN_ERROR_C 0x0A
+#define SERVER_RETUEN_ERROR_D 0x0B
+#define SERVER_RETURN_USERLIST 0x0C
+
+
+
 struct PackageHead {
 	unsigned char isData;
 	unsigned char type;
@@ -32,4 +40,8 @@ const PackageHead AllText = {
 
 const PackageHead GroupText = {
 	1,0x02,0,0,0
+};
+
+const PackageHead SendTest = {
+	0,0x00,0,0,0
 };
