@@ -15,7 +15,7 @@ public:
 	std::string ip;
 	int port;
 	QTcpSocket *tcpSocket;
-	int SendMessage(PackageHead head, const char * data);	// 
+	int SendMessage(PackageHead &head, const char * data);	// 
 	int GetMessage(PackageHead *head, char *data);
 	int Connect();
 	int DisConnect();

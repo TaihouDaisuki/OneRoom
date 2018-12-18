@@ -6,6 +6,8 @@
 #include "UserView.h"
 #include "MessageView.h"
 #include "define.h"
+#include "Socket.h"
+#include <qevent.h>
 
 class OneRoomClient : public QMainWindow
 {
@@ -22,7 +24,10 @@ public:
 
 private slots:
 	void on_sendMsgBtn_clicked();
-	void on_newMsg_come(QString msg, QString sendTime);
+	void on_sendFileBtn_clicked();
+	void on_sendImgBtn_clicked();
+	void on_logOutBtn_clicked();
+	void on_package_arrived(PackageHead head, char* data);
 
 private:
 	Ui::OneRoomClientClass ui;
@@ -30,4 +35,5 @@ private:
 	QList<UserInfo *> userList;	// 在线用户列表
 	UserInfo currentUser;	// 自己的用户信息
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
+	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器
 };
