@@ -58,7 +58,7 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 	}
 	else
 	{
-		if (head.type == SERVER_ACK)
+		if (head.type == SERVER_ACK_MESSAGE)
 		{
 			this->hide();
 			emit sendsignal();

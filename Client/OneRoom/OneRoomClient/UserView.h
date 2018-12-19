@@ -6,6 +6,7 @@ class UserInfo : public QWidget
 {
 	Q_OBJECT
 public:
+	UserInfo(const UserInfo &info);
 	explicit UserInfo(QWidget *parent = nullptr);
 	UserInfo(QString nickName, QString userName, QString loginTime);
 	void operator=(const UserInfo &info);	

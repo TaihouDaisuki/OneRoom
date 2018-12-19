@@ -182,12 +182,16 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 	if (head.isData == 1)
 	{
 		switch (head.type) {
-			case SERVER_ACK:
+			case SERVER_ACK_MESSAGE: {
 				// 收到消息确认包，确认消息发送成功
 				Message *message;
 				message = sendMsgQueue.front();
 				sendMsgQueue.pop_front();
 				message->setTextSuccess();
+				break;
+			}
+			case SERVER_ACK_CHANGE_PASSWORD:
+				emit change_password_success();
 				break;
 			case SERVER_RETURN_SETTING:
 				// 确认登陆成功
@@ -196,12 +200,11 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 				if (data[0] == SEND_MESSAGE_FAIL) {
 					// 发送消息失败
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败，指定用户不存在"));
-				
 				}
 				else if (data[0] == PASSWORD_ERROR) {
 					// 改密码失败，原密码错误
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("原密码错误"));
-				
+					emit change_password_fail();
 				}
 				else {
 					// nothing

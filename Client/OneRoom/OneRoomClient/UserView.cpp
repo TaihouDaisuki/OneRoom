@@ -3,6 +3,15 @@
 #include <QStyle>
 #include <QEvent>
 
+UserInfo::UserInfo(const UserInfo &info)
+{
+	u_nickName = info.u_nickName;
+	u_userName = info.u_userName;
+	u_loginTime = info.u_loginTime;
+	u_lineHeight = info.u_lineHeight;
+	u_pixmap = info.u_pixmap;
+}
+
 UserInfo::UserInfo(QWidget *parent) : QWidget(parent)
 {
 	QFont u_font = this->font();
