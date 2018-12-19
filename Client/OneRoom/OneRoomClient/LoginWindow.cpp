@@ -1,6 +1,6 @@
-#include "OneRoom.h"
+#include "LoginWindow.h"
 
-OneRoom::OneRoom(QWidget *parent)
+LoginWindow::LoginWindow(QWidget *parent)
 	: QMainWindow(parent)
 {
 	ui.setupUi(this);
@@ -17,14 +17,10 @@ OneRoom::OneRoom(QWidget *parent)
 	ui.lineEdit->setStyleSheet("border:1px solid grey;color:white");
 	ui.lineEdit_2->setStyleSheet("border:1px solid grey;color:white");
 	ui.lineEdit_2->setEchoMode(QLineEdit::Password);
-
-
-
-
 }
 
 
-void OneRoom::on_pushButton_clicked() 
+void LoginWindow::on_pushButton_clicked()
 {
 	tcpclient->Connect();
 	QString username = ui.lineEdit->text();
@@ -49,16 +45,12 @@ void OneRoom::on_pushButton_clicked()
 	memcpy(ch, username.toLocal8Bit(),username.toLocal8Bit().length());
 	memcpy(ch+20, username.toLocal8Bit(), username.toLocal8Bit().length());
 
-
-
 	this->tcpclient->Send(temp, ch);
 	ui.pushButton->setEnabled(false);
 	return;
 }
 
-
-
-void OneRoom::ReceivePack(PackageHead head, char *info)
+void LoginWindow::ReceivePack(PackageHead head, char *info)
 {
 	if (head.isData == 1)
 	{

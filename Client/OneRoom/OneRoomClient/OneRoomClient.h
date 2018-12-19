@@ -9,7 +9,7 @@
 #include "Socket.h"
 #include <qevent.h>
 #include "Socket.h"
-#include "OneRoom.h"
+#include "LoginWindow.h"
 #include <qqueue.h>
 
 class OneRoomClient : public QMainWindow
@@ -24,9 +24,8 @@ public:
 	void handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type);
 	void handleMessageTime(QString curMsgTime);
 	int addTargetUserData(QList<QListWidgetItem *> &itemList, char* data, int nCount);
-
 	
-	OneRoom *oneroom;
+	LoginWindow *loginWindow;
 private slots:
 	void on_sendMsgBtn_clicked();
 	void on_sendFileBtn_clicked();
@@ -42,11 +41,12 @@ public slots:
 private:
 	Ui::OneRoomClientClass ui;
 	Socket socket;
-	QList<UserInfo *> userList;	// 在线用户列表
-	QQueue<Message *> sendMsgQueue;	// 发送消息队列，用于服务端确认处理
 	UserInfo currentUser;	// 自己的用户信息
+	QList<UserInfo> userList;	// 在线用户列表
+	QQueue<Message *> sendMsgQueue;	// 发送消息队列，用于服务端确认处理
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
 	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器
+	void logout();
 };
 
 

@@ -48,7 +48,7 @@
     <ClCompile Include="UserView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OneRoom.cpp">
+    <ClCompile Include="LoginWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -62,10 +62,10 @@
     <QtMoc Include="UserView.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="OneRoom.h">
+    <QtMoc Include="Socket.h">
       <Filter>Header Files</Filter>
     </QtMoc>
-    <QtMoc Include="Socket.h">
+    <QtMoc Include="LoginWindow.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
@@ -73,10 +73,10 @@
     <QtUic Include="OneRoomClient.ui">
       <Filter>Form Files</Filter>
     </QtUic>
-    <QtUic Include="OneRoom.ui">
+    <QtUic Include="SettingBoard.ui">
       <Filter>Form Files</Filter>
     </QtUic>
-    <QtUic Include="SettingBoard.ui">
+    <QtUic Include="LoginWindow.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

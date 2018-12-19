@@ -1,5 +1,5 @@
 #pragma once
-#define MAX_USERNAME_SIZE 20	// 最长用户名大小
+#define MAX_USERNAME_SIZE 20	// 最长用户名大小(含\0)
 #define PACKAGE_HEAD_SIZE 8		
 #define PACKAGE_MAX_SIZE 2048	// 最长包大小
 #define MIN_PASSWORD_SIZE 10	// 最短密码长度

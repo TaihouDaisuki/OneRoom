@@ -16,9 +16,9 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	ui.msgTextEdit->installEventFilter(this);
 	this->setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
 	// test
-	userList.append(new UserInfo("Megumi", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
-	userList.append(new UserInfo(QString::fromLocal8Bit("测试"), "test", QString::number(QDateTime::currentDateTime().toTime_t())));
-	userList.append(new UserInfo("1234567890", "number", QString::number(QDateTime::currentDateTime().toTime_t())));
+	userList.append(UserInfo("Megumi", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
+	userList.append(UserInfo(QString::fromLocal8Bit("测试"), "test", QString::number(QDateTime::currentDateTime().toTime_t())));
+	userList.append(UserInfo("1234567890", "number", QString::number(QDateTime::currentDateTime().toTime_t())));
 
 	updateUserList();
 	// connect
@@ -26,13 +26,13 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	//this->tcpclient = new Socket;
 	//connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
 
-	this->oneroom = new OneRoom;
-	this->oneroom->tcpclient = &this->socket;
-	connect(this->oneroom, &OneRoom::sendsignal, this, &OneRoomClient::reshow_mainwindow);
-	connect(&this->socket, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
+	this->loginWindow = new LoginWindow;
+	this->loginWindow->tcpclient = &this->socket;
+	this->loginWindow->show();
 
+	connect(this->loginWindow, &LoginWindow::sendsignal, this, &OneRoomClient::reshow_mainwindow);
+	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 
-	this->oneroom->show();
 	setWindowOpacity(0.9);
 }
 
@@ -176,6 +176,72 @@ void OneRoomClient::on_sendImgBtn_clicked()
 
 }
 
+void OneRoomClient::on_package_arrived(PackageHead head, char* data)
+{
+	// 数据
+	if (head.isData == 1)
+	{
+		switch (head.type) {
+			case SERVER_ACK:
+				// 收到消息确认包，确认消息发送成功
+				Message *message;
+				message = sendMsgQueue.front();
+				sendMsgQueue.pop_front();
+				message->setTextSuccess();
+				break;
+			case SERVER_RETURN_SETTING:
+				// 确认登陆成功
+				break;
+			case SERVER_RETURN_ERROR_C:
+				if (data[0] == SEND_MESSAGE_FAIL) {
+					// 发送消息失败
+					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败，指定用户不存在"));
+				
+				}
+				else if (data[0] == PASSWORD_ERROR) {
+					// 改密码失败，原密码错误
+					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("原密码错误"));
+				
+				}
+				else {
+					// nothing
+				}
+				break;
+			case SERVER_RETUEN_ERROR_D:
+				socket.disconnect();	// 断开连接
+				if (data[0] == ENFORCE_OFFLINE) {
+					// 强制下线
+					logout();	// 登出
+				}
+				else {
+					// nothing
+				}
+				break;
+			case SERVER_RETURN_USERLIST: {
+				// 更新用户列表
+				int num = head.dataLen / MAX_USERNAME_SIZE;
+				userList.clear();
+				UserInfo userInfo;
+				for (int i = 0; i < num; i++) {
+					//user.setInfo();
+					userList.append(userInfo);
+				}
+				updateUserList();
+				break;
+			}
+			default:
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+				return;
+		}
+	}
+	// 控制
+	else
+	{
+
+	}
+
+}
+
 // 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从data指向地址开始填入, 返回填入长度
 int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* data, int nCount)
 {
@@ -200,69 +266,16 @@ int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* d
 	return length;
 }
 
-void OneRoomClient::on_package_arrived(PackageHead head, char* data)
-{
-	// 数据
-	if (head.isData == 1)
-	{
-		switch (head.type) {
-			case SERVER_ACK:
-				// 收到消息确认包，确认消息发送成功
-				Message *message;
-				message = sendMsgQueue.front();
-				sendMsgQueue.pop_front();
-				message->setTextSuccess();
-				break;
-			case SERVER_RETURN_SETTING:
-				// 确认登陆成功
-				break;
-			case SERVER_RETURN_ERROR_C:
-				if (data[0] == SEND_MESSAGE_FAIL) {
-					// 发送消息失败
-				}
-				else if (data[0] == PASSWORD_ERROR) {
-					// 改密码失败，原密码错误
-				}
-				else {
-
-				}
-				break;
-			case SERVER_RETUEN_ERROR_D:
-				if (data[0] == ENFORCE_OFFLINE) {
-					// 强制下线
-
-				}
-				else {
-
-				}
-				break;
-			case SERVER_RETURN_USERLIST:
-				// 更新用户列表
-
-				break;
-			default:
-				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
-				return;
-		}
-	}
-	// 控制
-	else
-	{
-
-	}
-		
-}
-
 /* User List View */
 // 更新用户列表
-
 void OneRoomClient::updateUserList()
 {
-	UserInfo *i;
+	UserInfo i;
+	ui.userListWidget->clear();	// 清空列表
 	foreach(i, userList) {	// 更新用户列表
 		UserInfo *info = new UserInfo(ui.userListWidget->parentWidget());
 		QListWidgetItem *item = new QListWidgetItem(ui.userListWidget);
-		handleUserinfo(info, item, i->nickName(), i->userName(), i->loginTime());
+		handleUserinfo(info, item, i.nickName(), i.userName(), i.loginTime());
 	}
 }
 
@@ -351,6 +364,14 @@ void OneRoomClient::on_logOutBtn_clicked() {
 void OneRoomClient::reshow_mainwindow()
 {
 	this->show();
+	disconnect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 	connect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
-	disconnect(&this->socket, &Socket::getNewmessage, this->oneroom, &OneRoom::ReceivePack);
+}
+
+void OneRoomClient::logout()
+{
+	this->hide();
+	loginWindow->show();
+	disconnect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
+	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <QtWidgets/QMainWindow>
-#include "ui_OneRoom.h"
+#include "ui_LoginWindow.h"
 #include <QMouseEvent>
 #include <windows.h> 
 #include <windowsx.h> 
@@ -28,16 +28,16 @@
 #include "Socket.h"
 
 
-class OneRoom : public QMainWindow
+class LoginWindow : public QMainWindow
 {
 	Q_OBJECT
 
 public:
-	OneRoom(QWidget *parent = Q_NULLPTR);
+	LoginWindow(QWidget *parent = Q_NULLPTR);
 	Socket *tcpclient;
 private:
 	
-	Ui::OneRoomClass ui;
+	Ui::LoginWindow ui;
 private slots:
 	void on_pushButton_clicked();
 public slots:

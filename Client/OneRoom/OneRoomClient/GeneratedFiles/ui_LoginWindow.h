@@ -1,13 +1,13 @@
 /********************************************************************************
-** Form generated from reading UI file 'OneRoom.ui'
+** Form generated from reading UI file 'LoginWindow.ui'
 **
-** Created by: Qt User Interface Compiler version 5.11.1
+** Created by: Qt User Interface Compiler version 5.11.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
 
-#ifndef UI_ONEROOM_H
-#define UI_ONEROOM_H
+#ifndef UI_LOGINWINDOW_H
+#define UI_LOGINWINDOW_H
 
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
@@ -19,7 +19,7 @@
 
 QT_BEGIN_NAMESPACE
 
-class Ui_OneRoomClass
+class Ui_LoginWindow
 {
 public:
     QWidget *centralWidget;
@@ -28,12 +28,12 @@ public:
     QPushButton *pushButton;
     QLabel *label;
 
-    void setupUi(QMainWindow *OneRoomClass)
+    void setupUi(QMainWindow *LoginWindow)
     {
-        if (OneRoomClass->objectName().isEmpty())
-            OneRoomClass->setObjectName(QStringLiteral("OneRoomClass"));
-        OneRoomClass->resize(276, 320);
-        centralWidget = new QWidget(OneRoomClass);
+        if (LoginWindow->objectName().isEmpty())
+            LoginWindow->setObjectName(QStringLiteral("LoginWindow"));
+        LoginWindow->resize(276, 320);
+        centralWidget = new QWidget(LoginWindow);
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
         lineEdit = new QLineEdit(centralWidget);
         lineEdit->setObjectName(QStringLiteral("lineEdit"));
@@ -47,26 +47,26 @@ public:
         label = new QLabel(centralWidget);
         label->setObjectName(QStringLiteral("label"));
         label->setGeometry(QRect(80, 40, 151, 131));
-        OneRoomClass->setCentralWidget(centralWidget);
+        LoginWindow->setCentralWidget(centralWidget);
 
-        retranslateUi(OneRoomClass);
+        retranslateUi(LoginWindow);
 
-        QMetaObject::connectSlotsByName(OneRoomClass);
+        QMetaObject::connectSlotsByName(LoginWindow);
     } // setupUi
 
-    void retranslateUi(QMainWindow *OneRoomClass)
+    void retranslateUi(QMainWindow *LoginWindow)
     {
-        OneRoomClass->setWindowTitle(QApplication::translate("OneRoomClass", "OneRoom", nullptr));
-        pushButton->setText(QApplication::translate("OneRoomClass", "->", nullptr));
-        label->setText(QApplication::translate("OneRoomClass", "TextLabel", nullptr));
+        LoginWindow->setWindowTitle(QApplication::translate("LoginWindow", "OneRoom", nullptr));
+        pushButton->setText(QApplication::translate("LoginWindow", "->", nullptr));
+        label->setText(QApplication::translate("LoginWindow", "TextLabel", nullptr));
     } // retranslateUi
 
 };
 
 namespace Ui {
-    class OneRoomClass: public Ui_OneRoomClass {};
+    class LoginWindow: public Ui_LoginWindow {};
 } // namespace Ui
 
 QT_END_NAMESPACE
 
-#endif // UI_ONEROOM_H
+#endif // UI_LOGINWINDOW_H
