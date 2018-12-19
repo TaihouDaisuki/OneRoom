@@ -1,5 +1,5 @@
 #pragma once
-#define MAX_USERNAME_SIZE 20	// 最长用户名大小
+#define MAX_USERNAME_SIZE 20	// 最长用户名大小(含\0)
 #define PACKAGE_HEAD_SIZE 8		
 #define PACKAGE_MAX_SIZE 2048	// 最长包大小
 #define MIN_PASSWORD_SIZE 10	// 最短密码长度
@@ -19,11 +19,12 @@
 #define CLIENT_CHANGE_SETTING 0x07
 
 // 服务端返回事件
-#define SERVER_ACK 0x01
+#define SERVER_ACK_MESSAGE 0x01
 #define SERVER_RETURN_SETTING 0x09
 #define SERVER_RETURN_ERROR_C 0x0A	// 错误保持连接
 #define SERVER_RETUEN_ERROR_D 0x0B	// 错误断开连接
 #define SERVER_RETURN_USERLIST 0x0C
+#define SERVER_ACK_CHANGE_PASSWORD 0x0D
 
 // 错误代码
 #define NO_SUCH_USER 0x00	// 不存在的用户
