@@ -35,6 +35,7 @@ public:
     QListWidget *userListWidget;
     QSpacerItem *horizontalSpacer;
     QListWidget *msgListWidget;
+    QPushButton *settingBtn;
 
     void setupUi(QMainWindow *OneRoomClientClass)
     {
@@ -117,6 +118,11 @@ public:
 
         gridLayout->addWidget(msgListWidget, 0, 2, 1, 6);
 
+        settingBtn = new QPushButton(centralWidget);
+        settingBtn->setObjectName(QStringLiteral("settingBtn"));
+
+        gridLayout->addWidget(settingBtn, 2, 1, 1, 1);
+
         OneRoomClientClass->setCentralWidget(centralWidget);
 
         retranslateUi(OneRoomClientClass);
@@ -137,6 +143,7 @@ public:
         sendFileBtn->setText(QApplication::translate("OneRoomClientClass", "Send File", nullptr));
         msgHistoryBtn->setText(QApplication::translate("OneRoomClientClass", "Check History", nullptr));
         logOutBtn->setText(QApplication::translate("OneRoomClientClass", "Log Out", nullptr));
+        settingBtn->setText(QApplication::translate("OneRoomClientClass", "Settings", nullptr));
     } // retranslateUi
 
 };

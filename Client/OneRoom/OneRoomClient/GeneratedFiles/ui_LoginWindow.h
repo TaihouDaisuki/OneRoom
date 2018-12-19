@@ -32,7 +32,9 @@ public:
     {
         if (LoginWindow->objectName().isEmpty())
             LoginWindow->setObjectName(QStringLiteral("LoginWindow"));
-        LoginWindow->resize(276, 320);
+        LoginWindow->resize(280, 300);
+        LoginWindow->setMinimumSize(QSize(280, 300));
+        LoginWindow->setMaximumSize(QSize(280, 300));
         centralWidget = new QWidget(LoginWindow);
         centralWidget->setObjectName(QStringLiteral("centralWidget"));
         lineEdit = new QLineEdit(centralWidget);
@@ -46,7 +48,7 @@ public:
         pushButton->setGeometry(QRect(210, 240, 41, 31));
         label = new QLabel(centralWidget);
         label->setObjectName(QStringLiteral("label"));
-        label->setGeometry(QRect(80, 40, 151, 131));
+        label->setGeometry(QRect(60, 20, 150, 150));
         LoginWindow->setCentralWidget(centralWidget);
 
         retranslateUi(LoginWindow);

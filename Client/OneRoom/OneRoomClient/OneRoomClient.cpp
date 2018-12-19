@@ -14,7 +14,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	ui.msgTextEdit->setFontFamily("MicrosoftYaHei");
 	ui.msgTextEdit->setFontPointSize(12);
 	ui.msgTextEdit->installEventFilter(this);
-	this->setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
+	setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
 	// test
 	userList.append(UserInfo("Megumi", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
 	userList.append(UserInfo(QString::fromLocal8Bit("测试"), "test", QString::number(QDateTime::currentDateTime().toTime_t())));
@@ -26,9 +26,12 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	//this->tcpclient = new Socket;
 	//connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
 
-	this->loginWindow = new LoginWindow;
-	this->loginWindow->tcpclient = &this->socket;
-	this->loginWindow->show();
+	// 初始化子窗口
+	loginWindow = new LoginWindow(this);
+	loginWindow->tcpclient = &this->socket;
+	loginWindow->show();
+
+	settingBoard = new SettingBoard(this);
 
 	connect(this->loginWindow, &LoginWindow::sendsignal, this, &OneRoomClient::reshow_mainwindow);
 	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
@@ -176,6 +179,11 @@ void OneRoomClient::on_sendImgBtn_clicked()
 
 }
 
+void OneRoomClient::on_settingBtn_clicked()
+{
+	settingBoard->show();
+}
+
 void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 {
 	// 数据
@@ -246,24 +254,26 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 }
 
 // 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从data指向地址开始填入, 返回填入长度
-int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* data, int nCount)
+int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* const data, int nCount)
 {
 	//char* data = new char[(nCount + 1) * USERNAME_BUFF_SIZE];
 	UserInfo *user;
 	QByteArray userNameByteArray;
 	int length = 0;
-
+	
+	// 首字节为发送人数
+	data[0] = (char)nCount;
 	for (int i = 0; i < nCount; i++) {
 		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[i]);
 		// QString to GBK char*
 		userNameByteArray = user->userName().toLocal8Bit();
-		memcpy(&data[i * MAX_USERNAME_SIZE], userNameByteArray.data(), MAX_USERNAME_SIZE);
+		memcpy(&data[i * MAX_USERNAME_SIZE + 1], userNameByteArray.data(), MAX_USERNAME_SIZE);
 		length += MAX_USERNAME_SIZE;
 	}
 
-	// 添加当前用户名称
+	// 添加当前用户名
 	userNameByteArray = currentUser.userName().toLocal8Bit();
-	memcpy(&data[nCount * MAX_USERNAME_SIZE], userNameByteArray.data(), MAX_USERNAME_SIZE);
+	memcpy(&data[nCount * MAX_USERNAME_SIZE + 1], userNameByteArray.data(), MAX_USERNAME_SIZE);
 	length += MAX_USERNAME_SIZE;
 
 	return length;

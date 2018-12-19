@@ -28,7 +28,6 @@
 #pragma comment (lib,"user32.lib")
 #include "Socket.h"
 
-
 class LoginWindow : public QMainWindow
 {
 	Q_OBJECT
