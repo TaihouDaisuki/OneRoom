@@ -24,6 +24,9 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 
+#include <stdbool.h>
+#include <mysql.h>
+
 
 #define TAIHOUDAISUKI           1
 #define MAXCONNNUM              64
@@ -49,6 +52,13 @@
 #define REQ_ERR_CONN            0x0A
 #define REQ_ERR_DISC            0x0B
 #define REQ_USER                0x0C
+#define PASS_CHG_SUCC           0x0D
+// error number
+#define ACC_NOT_EXIST           0x0
+#define CHG_PASS                0x1
+#define PASS_ERR                0x2
+#define KICK_OFF                0x3
+#define SND_ERR                 0x4
 
 
 using namespace std;
@@ -153,6 +163,11 @@ private:
     int userlist_request_to_all();
     int log_out_unexpected(ClientInfo *client);
 
+    int mysql_get_uid(const char* const account);
+    void mysql_get_username(const int uid, char* const username);
+    int mysql_compare_password(const char* const pass_MD5);
+    bool mysql_check_first_time(const int uid);
+
     sockaddr_in serveraddr;
     int listenfd;
 
@@ -161,6 +176,10 @@ private:
     map<int, ClientInfo*> userlist; // first-userid, second-sockfd
 
     int userreq; // 0-noneed 1-resend
+
+    MYSQL     *mysql;   
+    MYSQL_RES *result; 
+    MYSQL_ROW  row;
 };
 
 #endif

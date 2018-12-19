@@ -11,6 +11,8 @@
         "ostream": "cpp",
         "iosfwd": "cpp",
         "fstream": "cpp",
-        "istream": "cpp"
+        "istream": "cpp",
+        "xlocale": "cpp",
+        "utility": "cpp"
     }
 }

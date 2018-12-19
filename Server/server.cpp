@@ -185,13 +185,28 @@ ServerSock::ServerSock()
 
     userlist.clear();
     userreq = 0;
+
+    //==========database==========
+    if ((mysql = mysql_init(NULL))==NULL) 
+    {
+    	cout << "mysql_init failed" << endl;
+    	return -1;
+    }
+
+    if (mysql_real_connect(mysql, "localhost", "u1650254", "u1650254", "db1650254", 0, NULL, 0) == NULL) 
+    {
+    	cout << "mysql_real_connect failed(" << mysql_error(mysql) << ")" << endl;
+    	return -1;
+    }
+    mysql_set_character_set(mysql, "gbk"); 
 }
 ServerSock::~ServerSock()
 {
     // save data into database
     // close all socket
     clientlist.clear();
-        
+    mysql_close(mysql);
+    
     return;
 }
 
@@ -359,9 +374,10 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
     char account[MAXACCLEN + 1]; // get account from packet
     char password[MAXPASSLEN + 1]; // get password from packet
     char pass_MD5[MD5LEN + 1]; // get MD5
-    int dbaccres; // count(*) where database.account == account
+    int userid;
     int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
-    int fsttime; // select fsttime where database.account == account
+    bool fsttime; // select fsttime where database.account == account
+    CtrlPack _Packet(0, REQ_ERR_DISC, 0, 0, htonl(sizeof(char)));
 
     int _rs = client->Rcv(account, MAXACCLEN);
     if (_rs == READ_CLOSE || READ_ERROR)
@@ -376,32 +392,73 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
         return -1;
     }
 
-    if(!dbaccres)
+    // get account
+    userid = mysql_get_uid(account);
+    if(userid == -1)
     {
-        // *reply request account doesn't exist
-        return 1;
+        // reply request account doesn't exist
+        int _ws = client->Snd(_Packet, CTRLPACKLEN);
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+        char error_number = ACC_NOT_EXIST;
+        int _ws = client->Snd(error_number, sizeof(char));
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+
+        return -1;
     }
+
+    // search password
+    dbMD5res = mysql_compare_password(pass_MD5);
     if(!dbMD5res)
     {
-        // *reply request password error
-        return 1;
+        // reply request password error
+        int _ws = client->Snd(_Packet, CTRLPACKLEN);
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+        char error_number = PASS_ERR;
+        int _ws = client->Snd(error_number, sizeof(char));
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+
+        return -1;
     }
+
+    // check first time
+    
+    fsttime = mysql_check_first_time(userid);
     if(fsttime)
     {
-        // *reply to change default password
-        return 1;
+        // reply to change default password
+        int _ws = client->Snd(_Packet, CTRLPACKLEN);
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+        char error_number = CHG_PASS;
+        int _ws = client->Snd(error_number, sizeof(char));
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+
+        return -1;
     }
 
     // identify success
     char username[MAXNAMELEN]; // get username from database
-    int userid; // get userid from database
+    mysql_get_user_name(userid, username);
 
     map<int, ClientInfo*>::iterator it = userlist.serach(userid);
     if(it != map.end()) // kick off
     {
         ClientInfo* preclient = it->second;
 
-        // *send message to preclient for logging out
+        // send message to preclient for logging out
+        int _ws = preclient->Snd(_Packet, CTRLPACKLEN);
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(preclient);
+        char error_number = KICK_OFF;
+        int _ws = preclient->Snd(error_number, sizeof(char));
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(preclient);
+
 
         cout << "[userid = " << userid << " ] is kick off from [ip = " 
             << preclient->ip << ", port = " << preclient->port << endl;
@@ -413,6 +470,15 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
     // *read ini file into a struct
     // *reply setting struct 
     // *reply request successfully
+    _Packet.Type = REQ_SUCC;
+    _Packet.Datalen = 0; // ************************************************** the buffer length of ini file, here just testing
+    int _ws = client->Snd(_Packet, CTRLPACKLEN);
+    if (_ws == WRITE_CLOSE || WRITE_ERROR)
+        log_out_unexpected(client);
+    /*char error_number = KICK_OFF;
+    int _ws = client->Snd(error_number, sizeof(char));
+    if (_ws == WRITE_CLOSE || WRITE_ERROR)
+        log_out_unexpected(client);*/
 
     cout << "[userid = " << userid << " ] log in from [ip = " 
         << client->ip << ", port = " << client->port << endl << endl;
@@ -434,21 +500,16 @@ int ServerSock::log_out_request(ClientInfo *client)
 }
 int ServerSock::change_password_request(ClientInfo *client)
 {
-    char account[MAXACCLEN + 1]; // get account from packet
     char oldpassword[MAXPASSLEN + 1]; // get password from packet
     char oldpass_MD5[MD5LEN + 1]; // get MD5
     char newpassword[MAXPASSLEN + 1]; // get password from packet
     char newpass_MD5[MD5LEN + 1]; // get MD5
     int dbaccres; // count(*) where database.account == account
     int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+    char uid_c[10];
+    CtrlPack _Packet(0, REQ_ERR_DISC, 0, 0, htonl(sizeof(char)));
 
     int _rs;
-    _rs = client->Rcv(account, MAXACCLEN);
-    if (_rs == READ_CLOSE || READ_ERROR)
-    {
-        log_out_unexpected(client);
-        return -1;
-    }
     _rs = client->Rcv(oldpassword, MAXPASSLEN);
     if (_rs == READ_CLOSE || READ_ERROR)
     {
@@ -462,24 +523,38 @@ int ServerSock::change_password_request(ClientInfo *client)
         return -1;
     }
 
-    if(!strcmp(oldpassword, newpassword)) // 
-    {
-        // *reply password hasn't changed
-        return 1;
-    }
-    if(!dbaccres)
-    {
-        // *reply request account doesn't exist
-        return 1;
-    }
+    sprintf(uid_c, "%d", client->userid);
+    // search password
+    dbMD5res = mysql_compare_password(oldpass_MD5);
     if(!dbMD5res)
     {
-        // *reply request old password error
-        return 1;
+        // reply request password error
+        int _ws = client->Snd(_Packet, CTRLPACKLEN);
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+        char error_number = PASS_ERR;
+        int _ws = client->Snd(error_number, sizeof(char));
+        if (_ws == WRITE_CLOSE || WRITE_ERROR)
+            log_out_unexpected(client);
+
+        return -1;
     }
 
-    // *change password in database and set first_time_log_in to 0
-    // *reply password change successfully
+    // change password in database and set first_time_log_in to 0
+    // reply password change successfully
+    string sqlqry;
+    sqlqry = "update security set password_MD5 = \'";
+    sqlqry.append(newpass_MD5).append("\' where uid = ").append(uid_c).append(";");
+    mysql_query(mysql, sqlqry.c_str());
+    sqlqry = "update user set First_Time_Log_In = 1";
+    sqlqry.append(" where uid = ").append(uid_c).append(";");
+    mysql_query(mysql, sqlqry.c_str());
+
+    _Packet.Type = PASS_CHG_SUCC;
+    _Packet.Datalen = 0;
+    int _ws = client->Snd(_Packet, CTRLPACKLEN);
+    if (_ws == WRITE_CLOSE || WRITE_ERROR)
+        log_out_unexpected(client);
 }
 int ServerSock::change_setting_request(ClientInfo &client)
 {
@@ -537,7 +612,6 @@ int ServerSock::transmit_request(ClientInfo &client, CtrlPack *pack)
         {
             memcpy(rcver_acc[rcver_cnt], buffer, MAXACCLEN);
             bufferp += MAXACCLEN;
-            // rcver_uid[rcver_cnt] = select uid from database where database.account == rcver_acc[rcver_cnt]
             it = userlist.find(rcver_uid[rcver_cnt]);
             if(it == userlist.end())
                 snd_succ[rcver_cnt] = 0;
@@ -545,6 +619,7 @@ int ServerSock::transmit_request(ClientInfo &client, CtrlPack *pack)
             {
                 snd_succ[rcver_cnt] = 1;
                 rcver_client[rcver_cnt] = it->second();
+                rcver_uid[rcver_cnt] = mysql_get_uid(rcver_acc[rcver_cnt]);
             }
             ++rcver_cnt;
             break;
@@ -556,7 +631,6 @@ int ServerSock::transmit_request(ClientInfo &client, CtrlPack *pack)
             {
                 memcpy(rcver_acc[i], buffer + bufferp, MAXACCLEN);
                 bufferp += MAXACCLEN;
-                // rcver_uid[i] = select uid from database where database.account == rcver_acc[i]
                 it = userlist.find(rcver_uid[i]);
                 if (it == userlist.end())
                     snd_succ[i] = 0;
@@ -564,6 +638,7 @@ int ServerSock::transmit_request(ClientInfo &client, CtrlPack *pack)
                 {
                     snd_succ[i] = 1;
                     rcver_client[i] = it->second();
+                    rcver_uid[rcver_cnt] = mysql_get_uid(rcver_acc[rcver_cnt]);
                 }
             }
             break;
@@ -577,8 +652,8 @@ int ServerSock::transmit_request(ClientInfo &client, CtrlPack *pack)
                 snd_succ[rcver_cnt] = 1;
                 rcver_uid[rcver_cnt] = it->first;
                 rcver_client[rcver_cnt] = it->second;
+                mysql_get_username(rcver_uid[rcver_cnt], rcver_acc[rcver_cnt]);
                 ++rcver_cnt
-                // rcver_acc[rcver_cnt] = select account from database where database.uid == rcver_uid[rcver_cnt]
             }
 
             break;
@@ -701,4 +776,71 @@ inline int Server::log_out_unexpected(ClientInfo *client)
 
     userreq = 1;
     return 1;
+}
+
+int Server::mysql_get_uid(const char* const account)
+{
+    string sqlqry;
+
+    sqlqry = "select uid from user where user.account = \'";
+    sqlqry.append(account).append("\';");
+    
+    mysql_query(mysql, sqlqry.c_str());
+    result = mysql_store_result(mysql);
+    row = mysql_fetch_row(result);
+    int res = row == NULL ? -1 : row[0]
+
+    mysql_free_result(result);
+
+    return res;
+}
+void Server::mysql_get_username(const int uid, char* const username)
+{
+    string sqlqry;
+    char uid_c[10];
+    sprintf(uid_c, "%d", uid);
+
+    sqlqry = "select username from security where user.id = ";
+    sqlqry.append(uid_c).append("\';");
+
+    mysql_query(mysql, sqlqry.c_str());
+    result = mysql_store_result(mysql);
+    row = mysql_fetch_row(result);
+
+    strcpy(username, row[0]);
+    mysql_free_result(result);
+}
+int Server::mysql_compare_password(const char* const pass_MD5)
+{
+    string sqlqry;
+
+    sqlqry = "select count(*) from security where user.id = ";
+    sqlqry.append(uid_c).append(" and password_MD5 = \'").append(pass_MD5).append("\';");
+
+    mysql_query(mysql, sqlqry.c_str());
+    result = mysql_store_result(mysql);
+    row = mysql_fetch_row(result);
+    int res = row[0] ? 1 : 0;
+
+    mysql_free_result(result);
+    
+    return res;
+}
+bool mysql_check_first_time(const int uid)
+{
+    string sqlqry;
+    char uid_c[10];
+    sprintf(uid_c, "%d", uid);
+
+    sqlqry = "select First_Time_Log_In from security where user.id = ";
+    sqlqry.append(uid_c).append("\';");
+
+    mysql_query(mysql, sqlqry.c_str());
+    result = mysql_store_result(mysql);
+    row = mysql_fetch_row(result);
+    bool res = row[0];
+
+    mysql_free_result(result);
+
+    return res;
 }
