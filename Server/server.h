@@ -164,6 +164,7 @@ private:
     int log_out_unexpected(ClientInfo *client);
 
     int mysql_get_uid(const char* const account);
+    void mysql_get_account(const int uid, char* const account)
     void mysql_get_username(const int uid, char* const username);
     int mysql_compare_password(const char* const pass_MD5);
     bool mysql_check_first_time(const int uid);
