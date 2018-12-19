@@ -133,6 +133,7 @@
     <QtMoc Include="OneRoomClient.h" />
   </ItemGroup>
   <ItemGroup>
+    <QtUic Include="ChangePasswordWindow.ui" />
     <QtUic Include="LoginWindow.ui" />
     <QtUic Include="OneRoomClient.ui" />
     <QtUic Include="SettingBoard.ui" />

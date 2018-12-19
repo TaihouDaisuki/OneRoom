@@ -2,6 +2,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include "ui_LoginWindow.h"
+#include "ui_ChangePasswordWindow.h"
 #include <QMouseEvent>
 #include <windows.h> 
 #include <windowsx.h> 

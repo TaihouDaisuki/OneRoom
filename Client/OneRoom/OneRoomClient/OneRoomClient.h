@@ -2,15 +2,16 @@
 
 #include <QtWidgets/QMainWindow>
 #include <QTextCodec>
+#include <qqueue.h>
+#include <qevent.h>
+
 #include "ui_OneRoomClient.h"
 #include "UserView.h"
 #include "MessageView.h"
 #include "define.h"
 #include "Socket.h"
-#include <qevent.h>
 #include "Socket.h"
 #include "LoginWindow.h"
-#include <qqueue.h>
 
 class OneRoomClient : public QMainWindow
 {
