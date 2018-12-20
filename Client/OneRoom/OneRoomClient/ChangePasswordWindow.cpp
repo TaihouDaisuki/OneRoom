@@ -1,9 +1,16 @@
 #include "ChangePasswordWindow.h"
 #include <qmessagebox.h>
+#include <qregexp.h>
 
 ChangePasswordWindow::ChangePasswordWindow(QWidget *parent)
 {
 	ui.setupUi(this);
+	QRegExp regexp("^[A-Za-z0-9]+$");
+	
+	ui.oldPwLineEdit->setEchoMode(QLineEdit::Password);
+	ui.newPwLineEdit->setEchoMode(QLineEdit::Password);
+	
+	//ui.oldPwLineEdit->setValidator(new QRegExpValidator(regexp, this);
 }
 
 void ChangePasswordWindow::setOldPassword(QString password)
