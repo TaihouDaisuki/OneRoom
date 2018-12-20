@@ -8,9 +8,9 @@ class UserInfo : public QWidget
 public:
 	UserInfo(const UserInfo &info);
 	explicit UserInfo(QWidget *parent = nullptr);
-	UserInfo(QString nickName, QString userName, QString loginTime, QString password);
+	UserInfo(QString nickName, QString userName, QString loginTime, QString password = QString::null);
 	void operator=(const UserInfo &info);	
-	void setInfo(QString nickName, QString userName, QString loginTime, QString password);
+	void setInfo(QString nickName, QString userName, QString loginTime, QString password = QString::null);
 	QSize rectSize();
 	inline QString nickName() { return u_nickName; }
 	inline QString userName() { return u_userName; }
