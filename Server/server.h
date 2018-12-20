@@ -24,15 +24,41 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 
+#include <stdbool.h>
+#include <mysql.h>
+
 
 #define TAIHOUDAISUKI           1
 #define MAXCONNNUM              64
 #define NOTLOGGEDIN             -1
+#define ERRSOCKET               -1
 
-#define MAXACCLEN               30
-#define MAXPASSLEN              30
-#define MAXNAMELEN              30
+#define MAXACCLEN               20
+#define MAXPASSLEN              20
+#define MAXNAMELEN              20
 #define MD5LEN                  16
+#define MAXDATALEN              1500
+#define CTRLPACKLEN             8
+#define MAXBUFFERLEN            1520
+
+// from client
+#define LOG_IN_REQ              0x00
+#define LOG_OUT_REQ             0x03
+#define CHG_PSSW_REQ            0x07
+#define CHG_SET_REQ             0x08
+// from server
+#define REQ_SUCC                0x01
+#define REQ_SET                 0x09
+#define REQ_ERR_CONN            0x0A
+#define REQ_ERR_DISC            0x0B
+#define REQ_USER                0x0C
+#define PASS_CHG_SUCC           0x0D
+// error number
+#define ACC_NOT_EXIST           0x0
+#define CHG_PASS                0x1
+#define PASS_ERR                0x2
+#define KICK_OFF                0x3
+#define SND_ERR                 0x4
 
 
 using namespace std;
@@ -60,7 +86,7 @@ public:
 
     bool operator ==(const ClientInfo &rhs) const
     {
-        return sockfd == rhs.fd;
+        return fd == rhs.fd;
     }
     ClientInfo& operator =(const ClientInfo &rhs)
     {
@@ -68,18 +94,10 @@ public:
         userid = rhs.userid;
         memcpy(ip, rhs.ip, INET_ADDRSTRLEN + 1);
         port = rhs.port;
+
         bufflen = rhs.bufflen;
         buffp = rhs.buffp;
-        if(rhs.buff == NULL)
-            buff = NULL;
-        else
-        {
-            buff = new(nothrow) char[bufflen];
-            if(buff == NULL)
-                bufflen = buffp = 0;
-            else
-                memcpy(buff, rhs.buff, bufflen);
-        }   
+        memcpy(buff, rhs.buff, bufflen);
         return *this;         
     }
 
@@ -88,16 +106,25 @@ public:
 
     int Read_Bitstream();
     int Write_Bitstream();
+
+    void Load_Buffer(void * const dst, const int len);
+    void reset_read_buff(const int len);
+    void Save_Buffer(void * const src, const int len);
+
+    int Rcv(void *const dst, const int len);
+    int Snd(void *const src, const int len);
+
     int is_Logged_in() const;
 
     int sockfd;
     int userid;
     char ip[INET_ADDRSTRLEN + 1];
     int port;
+    int bufflen[2]; // read-0 write-1
+
 private:
-    int bufflen;
-    int buffp;
-    char *buff;
+    int buffp[2]; // read-0 write-1
+    char buff[2][MAXBUFFERLEN]; // read-0 write-1
 }
 
 class ServerSock: private ClientInfo
@@ -107,26 +134,53 @@ public:
     ~ServerSock();
 
     int Server_Start();
+
 private:
-    enum _requesttype
-    {
-        DEFAULT_REQUEST, LOG_IN, LOG_OUT, GET_USERLIST, GET_SETTINGS, CHANGE_SETTINGS, TRANSMIT_MSG
-    };
     enum _messagetpye
     {
-        DEFAULT_MESSAGE, TEXT_TYPE, GRAPH_TYPE, FILE_TYPE
+        TEXT_TYPE, GRAPH_TYPE, FILE_TYPE
     };
     enum _sendtype
     {
-        DEFAULT_RECEIVER, P_2_P, P_2_G, P_2_A
+        P_2_P, P_2_A, P_2_G
     };
+
+    struct CtrlPack
+    {
+        unsigned char isData;
+        unsigned char Type;
+        unsigned char isCut;
+        unsigned char Seq;
+        int Datalen;
+    };
+
+    int log_in_request(ClientInfo *client);
+    int log_out_request(ClientInfo *client);
+    int change_password_request(ClientInfo *client)
+    int change_setting_request(ClientInfo *client);
+    int transmit_request(ClientInfo *client, Packet *pack);
+
+    int userlist_request_to_all();
+    int log_out_unexpected(ClientInfo *client);
+
+    int mysql_get_uid(const char* const account);
+    void mysql_get_account(const int uid, char* const account)
+    void mysql_get_username(const int uid, char* const username);
+    int mysql_compare_password(const char* const pass_MD5);
+    bool mysql_check_first_time(const int uid);
 
     sockaddr_in serveraddr;
     int listenfd;
 
     list<ClientInfo> clientlist;
     int clicnt;
-    map<int, int> userlist; // first-userid, second-sockfd
+    map<int, ClientInfo*> userlist; // first-userid, second-sockfd
+
+    int userreq; // 0-noneed 1-resend
+
+    MYSQL     *mysql;   
+    MYSQL_RES *result; 
+    MYSQL_ROW  row;
 };
 
 #endif
