@@ -36,7 +36,7 @@
 #define MAXACCLEN               20
 #define MAXPASSLEN              20
 #define MAXNAMELEN              20
-#define MD5LEN                  16
+#define MD5LEN                  32
 #define MAXDATALEN              2000
 #define CTRLPACKLEN             8
 #define MAXBUFFERLEN            2020
