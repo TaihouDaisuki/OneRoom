@@ -52,7 +52,7 @@ int ClientInfo::Read_Bitstream()
     do
     {
         errno = 0;
-        _rs = read(sockfd, buff[0] + bufferp[0], bufflen[0] - buffp[0]);
+        _rs = read(sockfd, buff[0] + buffp[0], bufflen[0] - buffp[0]);
         buffp[0] += (_rs > 0 ? _rs : 0);
         if(buffp[0] == bufflen[0])
             break;
@@ -64,7 +64,7 @@ int ClientInfo::Read_Bitstream()
     {
         if(errno == EWOULDBLOCK || errno == EAGAIN)
             return READ_HUNGUP;
-        cerr << "sockfd[" << sockfd "] Read error: " << strerror(errno) << endl;
+        cerr << "sockfd[" << sockfd << "] Read error: " << strerror(errno) << endl;
         cerr << "It's belong to userid = " << userid << endl;
         return READ_ERROR;
     }
@@ -76,7 +76,7 @@ int ClientInfo::Write_Bitstream()
     do
     {
         errno = 0;
-        _ws = write(sockfd, buffer[1] + buffer_p[1], bufflen[1] - buffer_p[1]);
+        _ws = write(sockfd, buff[1] + buffp[1], bufflen[1] - buffp[1]);
         buffp[1] += (_ws > 0 ? _ws : 0);
         if(buffp[1] == bufflen[1])
             break;
@@ -87,8 +87,8 @@ int ClientInfo::Write_Bitstream()
     else if(_ws < 0)
     {
         if(errno == EWOULDBLOCK || errno == EAGAIN)
-            return WRITE_HANGUP;
-        cerr << "sockfd[" << sockfd "] Write error: " << strerror(errno) << endl;
+            return WRITE_HUNGUP;
+        cerr << "sockfd[" << sockfd << "] Write error: " << strerror(errno) << endl;
         cerr << "It's belong to userid = " << userid << endl;
         return WRITE_ERROR;
     }
@@ -98,8 +98,6 @@ int ClientInfo::Write_Bitstream()
 void ClientInfo::Load_Buffer(void * const dst, const int len)
 {
     memcpy(dst, buff[0], len);
-
-    return 1;
 }
 void ClientInfo::reset_read_buff(const int len)
 {
@@ -111,8 +109,6 @@ void ClientInfo::Save_Buffer(void * const src, const int len)
     memcpy(buff[1], src, len);
     buffp[1] = 0;
     bufflen[1] = len;
-
-    return 1;
 }
 
 int ClientInfo::Rcv(void *const dst, const int len)
@@ -173,7 +169,7 @@ ServerSock::ServerSock()
     }
 
     //==========listen==========
-    if(listen(sock, MAXCONNNUM) < 0)
+    if(listen(listenfd, MAXCONNNUM) < 0)
 	{
 		cerr << "listen socket error: " << strerror(errno) << endl;
         exit(EXIT_FAILURE);
@@ -189,14 +185,14 @@ ServerSock::ServerSock()
     //==========database==========
     if ((mysql = mysql_init(NULL))==NULL) 
     {
-    	cout << "mysql_init failed" << endl;
-    	return -1;
+    	cerr << "mysql_init failed" << endl;
+        exit(EXIT_FAILURE);
     }
 
     if (mysql_real_connect(mysql, "localhost", "u1650254", "u1650254", "db1650254", 0, NULL, 0) == NULL) 
     {
-    	cout << "mysql_real_connect failed(" << mysql_error(mysql) << ")" << endl;
-    	return -1;
+    	cerr << "mysql_real_connect failed(" << mysql_error(mysql) << ")" << endl;
+        exit(EXIT_FAILURE);
     }
     mysql_set_character_set(mysql, "gbk"); 
 }
@@ -234,7 +230,7 @@ int ServerSock::Server_Start()
 		}
 
         // listen socket
-        if(FD_ISSET(fd, &readfds))
+        if(FD_ISSET(listenfd, &readfds))
         {
             int clientfd = 0, flag;
             struct sockaddr_in cliaddr;
@@ -279,14 +275,14 @@ int ServerSock::Server_Start()
             }
             if(read_res == READ_ERROR || read_res == READ_CLOSE)
             {
-                log_out_unexpected(curclient);
+                log_out_unexpected(&curclient);
                 clientlist.erase(it++);
                 continue;
             }
             if(read_res == READ_FINISH)  // be care of it++
             {
-                Packet packet;
-                curclient.Load_Buffer(&packet);
+                CtrlPack packet;
+                curclient.Load_Buffer(&packet, CTRLPACKLEN);
                 if(!curclient.is_Logged_in() && (packet.isData || packet.Type != LOG_IN_REQ))
                 {
                     // *reply request error(has not log in)
@@ -362,6 +358,8 @@ int ServerSock::Server_Start()
                 ++it;
         }
     }
+
+    return 1;
 }
 /*
     read / write error ==> disconnect ==> remove ==> flag = 1
@@ -369,13 +367,12 @@ int ServerSock::Server_Start()
     loop final ==> flag = 1 ==> flush ==> flag = 0 (if disconnect ==> flag = 1)
 */
 
-int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wating for adding limit max log in number
+int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit max log in number
 {
     char account[MAXACCLEN + 1]; // get account from packet
     char password[MAXPASSLEN + 1]; // get password from packet
-    char pass_MD5[MD5LEN + 1]; // get MD5
     int userid;
-    int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+    int dbpassres; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
     bool fsttime; // select fsttime where database.account == account
     CtrlPack _Packet = {0, REQ_ERR_DISC, 0, 0, htonl(sizeof(char))};
 
@@ -399,8 +396,8 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
     {
         // reply request account doesn't exist
         char error_number = ACC_NOT_EXIST;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
         int _ws = client->Snd(buffer, CTRLPACKLEN + sizeof(char));
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
@@ -410,15 +407,15 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
     }
 
     // search password
-    dbMD5res = mysql_compare_password(pass_MD5);
-    if(!dbMD5res)
+    dbpassres = mysql_compare_password(userid, password);
+    if(!dbpassres)
     {
         // reply request password error
         char error_number = PASS_ERR;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
-        int _ws = client->Snd(_Packet, CTRLPACKLEN + sizeof(char));
+        int _ws = client->Snd(buffer, CTRLPACKLEN + sizeof(char));
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
             log_out_unexpected(client);
 
@@ -432,10 +429,10 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
     {
         // reply to change default password
         char error_number = CHG_PASS;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
-        int _ws = client->Snd(_Packet, CTRLPACKLEN + sizeof(char));
+        int _ws = client->Snd(buffer, CTRLPACKLEN + sizeof(char));
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
             log_out_unexpected(client);
 
@@ -444,19 +441,19 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
 
     // identify success
     char username[MAXNAMELEN]; // get username from database
-    mysql_get_user_name(userid, username);
+    mysql_get_username(userid, username);
 
-    map<int, ClientInfo*>::iterator it = userlist.serach(userid);
-    if(it != map.end()) // kick off
+    map<int, ClientInfo*>::iterator it = userlist.find(userid);
+    if(it != userlist.end()) // kick off
     {
         ClientInfo* preclient = it->second;
 
         // send message to preclient for logging out
         char error_number = KICK_OFF;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
-        int _ws = preclient->Snd(_Packet, CTRLPACKLEN);
+        int _ws = preclient->Snd(buffer, CTRLPACKLEN);
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
             log_out_unexpected(preclient);
         
@@ -472,7 +469,7 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
     // *reply request successfully
     _Packet.Type = REQ_SUCC;
     _Packet.Datalen = 0; // ************************************************** the buffer length of ini file, here just testing
-    int _ws = client->Snd(_Packet, CTRLPACKLEN);
+    int _ws = client->Snd(&_Packet, CTRLPACKLEN);
     if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
         log_out_unexpected(client);
 
@@ -497,11 +494,8 @@ int ServerSock::log_out_request(ClientInfo *client)
 int ServerSock::change_password_request(ClientInfo *client)
 {
     char oldpassword[MAXPASSLEN + 1]; // get password from packet
-    char oldpass_MD5[MD5LEN + 1]; // get MD5
     char newpassword[MAXPASSLEN + 1]; // get password from packet
-    char newpass_MD5[MD5LEN + 1]; // get MD5
-    int dbaccres; // count(*) where database.account == account
-    int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+    int dbpasswordres; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
     char uid_c[10];
     CtrlPack _Packet = {0, REQ_ERR_DISC, 0, 0, htonl(sizeof(char))};
 
@@ -522,13 +516,13 @@ int ServerSock::change_password_request(ClientInfo *client)
     sprintf(uid_c, "%d", client->userid);
     // search password
     char buffer[MAXBUFFERLEN];
-    dbMD5res = mysql_compare_password(oldpass_MD5);
-    if(!dbMD5res)
+    dbpasswordres = mysql_compare_password(client->userid, oldpassword);
+    if(!dbpasswordres)
     {
         // reply request password error
         char error_number = PASS_ERR;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
         int _ws = client->Snd(buffer, CTRLPACKLEN + sizeof(char));
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
@@ -540,8 +534,8 @@ int ServerSock::change_password_request(ClientInfo *client)
     // change password in database and set first_time_log_in to 0
     // reply password change successfully
     string sqlqry;
-    sqlqry = "update security set password_MD5 = \'";
-    sqlqry.append(newpass_MD5).append("\' where uid = ").append(uid_c).append(";");
+    sqlqry = "update security set password_MD5 = md5(\'";
+    sqlqry.append(newpassword).append("\') where uid = ").append(uid_c).append(";");
     mysql_query(mysql, sqlqry.c_str());
     sqlqry = "update user set First_Time_Log_In = 1";
     sqlqry.append(" where uid = ").append(uid_c).append(";");
@@ -549,9 +543,11 @@ int ServerSock::change_password_request(ClientInfo *client)
 
     _Packet.Type = PASS_CHG_SUCC;
     _Packet.Datalen = 0;
-    int _ws = client->Snd(_Packet, CTRLPACKLEN);
+    int _ws = client->Snd(&_Packet, CTRLPACKLEN);
     if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
         log_out_unexpected(client);
+
+    return 1;
 }
 int ServerSock::change_setting_request(ClientInfo *client)
 {
@@ -563,8 +559,8 @@ int ServerSock::change_setting_request(ClientInfo *client)
 }
 int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
 {
-    int snd_type = pack->type & 0xF;
-    int mess_type = (pack->type >> 4) & 0xF;
+    int snd_type = pack->Type & 0xF;
+    int mess_type = (pack->Type >> 4) & 0xF;
     int rcver_cnt = 0;
     char rcver_acc[MAXCONNNUM][MAXACCLEN];
     int rcver_uid[MAXCONNNUM];
@@ -581,7 +577,7 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
     int bufferlen = 0;
     while(TAIHOUDAISUKI)
     {
-        _rs = client->Rcv(databuffer + bufferlen, pack->Datalen);
+        int _rs = client->Rcv(databuffer + bufferlen, pack->Datalen);
         if (_rs == READ_CLOSE || _rs == READ_ERROR)
         {
             log_out_unexpected(client);
@@ -589,11 +585,11 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
             return -1;
         }
 
-        bufferp += ntohl(pack->Datalen);  // net to host !!!
+        bufferlen += ntohl(pack->Datalen);  // net to host !!!
         if(pack->Seq == pack->isCut)
             break;
             
-        _rs = client->Rcv(packet, CTRLPACKLEN);
+        _rs = client->Rcv(pack, CTRLPACKLEN);
         if (_rs == READ_CLOSE || _rs == READ_ERROR)
         {
             log_out_unexpected(client);
@@ -615,7 +611,7 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
             else
             {
                 snd_succ[rcver_cnt] = 1;
-                rcver_client[rcver_cnt] = it->second();
+                rcver_client[rcver_cnt] = it->second;
                 rcver_uid[rcver_cnt] = mysql_get_uid(rcver_acc[rcver_cnt]);
             }
             ++rcver_cnt;
@@ -634,7 +630,7 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
                 else
                 {
                     snd_succ[i] = 1;
-                    rcver_client[i] = it->second();
+                    rcver_client[i] = it->second;
                     rcver_uid[rcver_cnt] = mysql_get_uid(rcver_acc[rcver_cnt]);
                 }
             }
@@ -644,13 +640,13 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
         {
             for(it = userlist.begin(); it != userlist.end(); ++it)
             {
-                if(it->first == client.userid) // don't send to the sender
+                if(it->first == client->userid) // don't send to the sender
                     continue;
                 snd_succ[rcver_cnt] = 1;
                 rcver_uid[rcver_cnt] = it->first;
                 rcver_client[rcver_cnt] = it->second;
                 mysql_get_username(rcver_uid[rcver_cnt], rcver_acc[rcver_cnt]);
-                ++rcver_cnt
+                ++rcver_cnt;
             }
 
             break;
@@ -692,12 +688,12 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
     unsigned char _Type = (mess_type << 4) | snd_type;
     unsigned char _isCut = (bufferlen - bufferp) / MAXDATALEN - 1 + !!((bufferlen - bufferp) % MAXDATALEN);
     char buffer[MAXBUFFERLEN];
-    for(int _Seq = 0; _Seq <= _isCut; ++_Seq)
+    for(unsigned char _Seq = 0; _Seq <= _isCut; ++_Seq)
     {
-        int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
-        int _Datalen = hton(curlen);
+        unsigned int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
+        unsigned int _Datalen = htonl(curlen);
         CtrlPack _Packet = {_isData, _Type, _isCut, _Seq, _Datalen};
-        memcpy(buffer, _Packet, CTRLPACKLEN);
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
         memcpy(buffer + CTRLPACKLEN, databuffer + bufferp, curlen);
 
         for (int i = 0; i < rcver_cnt; ++i)
@@ -729,13 +725,13 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
 
     bufferlen = MAXACCLEN * succ_cnt;
     bufferp = 0;
-    databuffer = new(nothrow) char[succlist_len];
+    databuffer = new(nothrow) char[bufferlen];
     if(databuffer == NULL)
     {
         cerr << "Server Run Out of Memory" << endl;
         exit(EXIT_FAILURE);
     }
-    _isCut = succlist_len / MAXDATALEN - 1 + !!(succlist_len % MAXDATALEN);
+    _isCut = bufferlen / MAXDATALEN - 1 + !!(bufferlen % MAXDATALEN);
     CtrlPack _Packet = {0, REQ_SUCC, _isCut, 0, 0};
     if(!succ_cnt)
     {
@@ -754,16 +750,16 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
             }
     }
 
-    for(int _Seq = 0; _Seq <= _isCut; ++_Seq)
+    for(unsigned char _Seq = 0; _Seq <= _isCut; ++_Seq)
     {
-        int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
-        int _Datalen = hton(curlen);
+        unsigned int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
+        unsigned int _Datalen = htonl(curlen);
         _Packet.Seq = _Seq;
         _Packet.Datalen = _Datalen;
 
-        memcpy(buffer, _Packet, CTRLPACKLEN);
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
         memcpy(buffer + CTRLPACKLEN, databuffer + bufferp, curlen);
-        int _ws = client->Snd(_Packet, CTRLPACKLEN);
+        int _ws = client->Snd(buffer, CTRLPACKLEN);
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
         {
             log_out_unexpected(client);
@@ -782,7 +778,7 @@ int ServerSock::userlist_request_to_all()
     int uid[MAXCONNNUM];
     int alivecnt = 0;
     map<int, ClientInfo *>::iterator mapit;
-    for(mapit = userlist.begin(); mapit != userlist.end(); ++it)
+    for(mapit = userlist.begin(); mapit != userlist.end(); ++mapit)
         uid[alivecnt++] = mapit->first;
 
     char account[MAXACCLEN];
@@ -810,13 +806,13 @@ int ServerSock::userlist_request_to_all()
     char buffer[MAXBUFFERLEN];
     bufferp = 0;
     list<ClientInfo>::iterator listit;
-    for(int _Seq = 0; _Seq <= _isCut; ++_Seq)
+    for(unsigned char _Seq = 0; _Seq <= _isCut; ++_Seq)
     {
-        int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
-        int _Datalen = hton(curlen);
+        unsigned int curlen = (_Seq == _isCut) ? (datalen - bufferp) : MAXDATALEN;
+        unsigned int _Datalen = htonl(curlen);
         _Packet.Seq = _Seq;
         _Packet.Datalen = _Datalen;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
         memcpy(buffer + CTRLPACKLEN, data + bufferp, curlen);
 
         for (listit = clientlist.begin(); listit != clientlist.end(); ++listit)
@@ -828,7 +824,7 @@ int ServerSock::userlist_request_to_all()
             int _ws = client.Snd(buffer, CTRLPACKLEN + curlen);
             if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
             {
-                log_out_unexpected(client);
+                log_out_unexpected(&client);
                 continue;
             }
         }
@@ -840,7 +836,7 @@ int ServerSock::userlist_request_to_all()
     return 1;
 }
 
-inline int Server::log_out_unexpected(ClientInfo *client)
+int ServerSock::log_out_unexpected(ClientInfo *client)
 {
     cout << "[userid = " << client->userid << " ] log out from [ip = " 
         << client->ip << ", port = " << client->port << " unexpected." << endl << endl;
@@ -853,7 +849,7 @@ inline int Server::log_out_unexpected(ClientInfo *client)
     return 1;
 }
 
-int Server::mysql_get_uid(const char* const account)
+int ServerSock::mysql_get_uid(const char* const account)
 {
     string sqlqry;
 
@@ -863,13 +859,13 @@ int Server::mysql_get_uid(const char* const account)
     mysql_query(mysql, sqlqry.c_str());
     result = mysql_store_result(mysql);
     row = mysql_fetch_row(result);
-    int res = row == NULL ? -1 : row[0]
+    int res = row == NULL ? -1 : atoi(row[0]);
 
     mysql_free_result(result);
 
     return res;
 }
-void Server::mysql_get_account(const int uid, char* const account)
+void ServerSock::mysql_get_account(const int uid, char* const account)
 {
     string sqlqry;
     char uid_c[10];
@@ -885,7 +881,7 @@ void Server::mysql_get_account(const int uid, char* const account)
     strcpy(account, row[0]);
     mysql_free_result(result);
 }
-void Server::mysql_get_username(const int uid, char* const username)
+void ServerSock::mysql_get_username(const int uid, char* const username)
 {
     string sqlqry;
     char uid_c[10];
@@ -901,23 +897,25 @@ void Server::mysql_get_username(const int uid, char* const username)
     strcpy(username, row[0]);
     mysql_free_result(result);
 }
-int Server::mysql_compare_password(const char* const pass_MD5)
+int ServerSock::mysql_compare_password(const int uid, const char* const password)
 {
     string sqlqry;
+    char uid_c[10];
+    sprintf(uid_c, "%d", uid);
 
     sqlqry = "select count(*) from security where user.id = ";
-    sqlqry.append(uid_c).append(" and password_MD5 = \'").append(pass_MD5).append("\';");
+    sqlqry.append(uid_c).append(" and password_MD5 = md5(\'").append(password).append("\');");
 
     mysql_query(mysql, sqlqry.c_str());
     result = mysql_store_result(mysql);
     row = mysql_fetch_row(result);
-    int res = row[0] ? 1 : 0;
+    int res = atoi(row[0]) ? 1 : 0;
 
     mysql_free_result(result);
     
     return res;
 }
-bool mysql_check_first_time(const int uid)
+bool ServerSock::mysql_check_first_time(const int uid)
 {
     string sqlqry;
     char uid_c[10];

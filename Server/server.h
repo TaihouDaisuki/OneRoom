@@ -37,9 +37,9 @@
 #define MAXPASSLEN              20
 #define MAXNAMELEN              20
 #define MD5LEN                  16
-#define MAXDATALEN              1500
+#define MAXDATALEN              2000
 #define CTRLPACKLEN             8
-#define MAXBUFFERLEN            1520
+#define MAXBUFFERLEN            2020
 
 // from client
 #define LOG_IN_REQ              0x00
@@ -66,7 +66,7 @@ using namespace std;
 enum _serverres
 {
     SERVER_DEFAULT, SERVER_ERROR, SERVER_FINISH
-}
+};
 
 class ClientInfo
 {
@@ -86,7 +86,7 @@ public:
 
     bool operator ==(const ClientInfo &rhs) const
     {
-        return fd == rhs.fd;
+        return sockfd == rhs.sockfd;
     }
     ClientInfo& operator =(const ClientInfo &rhs)
     {
@@ -95,9 +95,12 @@ public:
         memcpy(ip, rhs.ip, INET_ADDRSTRLEN + 1);
         port = rhs.port;
 
-        bufflen = rhs.bufflen;
-        buffp = rhs.buffp;
-        memcpy(buff, rhs.buff, bufflen);
+        buffp[0] = rhs.buffp[0];
+        buffp[1] = rhs.buffp[1];
+        bufflen[0] = rhs.bufflen[0];
+        bufflen[1] = rhs.bufflen[1];
+        memcpy(buff[0], rhs.buff[0], bufflen[0]);
+        memcpy(buff[1], rhs.buff[1], bufflen[1]);
         return *this;         
     }
 
@@ -125,7 +128,7 @@ public:
 private:
     int buffp[2]; // read-0 write-1
     char buff[2][MAXBUFFERLEN]; // read-0 write-1
-}
+};
 
 class ServerSock: private ClientInfo
 {
@@ -151,22 +154,25 @@ private:
         unsigned char Type;
         unsigned char isCut;
         unsigned char Seq;
-        int Datalen;
+        unsigned int Datalen;
     };
 
+    // request
     int log_in_request(ClientInfo *client);
     int log_out_request(ClientInfo *client);
-    int change_password_request(ClientInfo *client)
+    int change_password_request(ClientInfo *client);
     int change_setting_request(ClientInfo *client);
-    int transmit_request(ClientInfo *client, Packet *pack);
+    int transmit_request(ClientInfo *client, CtrlPack *pack);
 
+    // common
     int userlist_request_to_all();
     int log_out_unexpected(ClientInfo *client);
 
+    // mysql part
     int mysql_get_uid(const char* const account);
-    void mysql_get_account(const int uid, char* const account)
+    void mysql_get_account(const int uid, char* const account);
     void mysql_get_username(const int uid, char* const username);
-    int mysql_compare_password(const char* const pass_MD5);
+    int mysql_compare_password(const int uid, const char* const password);
     bool mysql_check_first_time(const int uid);
 
     sockaddr_in serveraddr;
