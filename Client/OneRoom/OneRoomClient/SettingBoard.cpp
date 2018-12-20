@@ -1,6 +1,6 @@
 #include <SettingBoard.h>
 
-SettingBoard::SettingBoard(QWidget *parent = Q_NULLPTR)
+SettingBoard::SettingBoard(QWidget *parent)
 {
 	ui.setupUi(this);
 	changePasswordWindow = new ChangePasswordWindow(this);
@@ -19,5 +19,5 @@ void SettingBoard::on_cancelButton_clicked()
 
 void SettingBoard::on_changeButton_clicked()
 {
-	emit new_settings();
+	emit historyList_num(ui.spinBox->value());
 }

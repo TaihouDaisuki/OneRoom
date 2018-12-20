@@ -1,7 +1,7 @@
 #include "ChangePasswordWindow.h"
 #include <qmessagebox.h>
 
-ChangePasswordWindow::ChangePasswordWindow(QWidget *parent = Q_NULLPTR)
+ChangePasswordWindow::ChangePasswordWindow(QWidget *parent)
 {
 	ui.setupUi(this);
 }

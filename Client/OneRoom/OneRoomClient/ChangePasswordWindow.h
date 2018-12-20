@@ -15,7 +15,6 @@ private slots:
 	void on_confirmButton_clicked();
 
 signals:
-	void historyList_num(int num);
 	void new_password(QString password);
 
 private:

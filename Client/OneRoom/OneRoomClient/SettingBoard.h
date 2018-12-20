@@ -16,7 +16,7 @@ private slots:
 	void on_changeButton_clicked();
 
 signals:
-	void new_settings();
+	void historyList_num(int num);
 
 private:
 	Ui::settingBoard ui;

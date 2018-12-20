@@ -17,18 +17,23 @@ LoginWindow::LoginWindow(QWidget *parent)
 	ui.lineEdit->setStyleSheet("border:1px solid grey;color:white");
 	ui.lineEdit_2->setStyleSheet("border:1px solid grey;color:white");
 	ui.lineEdit_2->setEchoMode(QLineEdit::Password);
-}
 
+	// child window
+	ChangePwWin = new ChangePasswordWindow(this);
+	
+	// connect
+	connect(ChangePwWin, SIGNAL(new_password(QString password)), this, SLOT(handle_new_password(QString password)));
+}
 
 void LoginWindow::on_pushButton_clicked()
 {
-	tcpclient->Connect();
+	//tcpclient->Connect();
 	QString username = ui.lineEdit->text();
 	QString password = ui.lineEdit_2->text();
-	if (username.toLocal8Bit().length() > 20|| password.toLocal8Bit().length()>20)
+	if (username.toLocal8Bit().length() > MAX_USERNAME_SIZE || password.toLocal8Bit().length()>20)
 	{
 		QMessageBox::critical(0,
-			"critical message", QString::fromLocal8Bit("用户名或密码错误，请重新输入"),
+			"critical message", QString::fromLocal8Bit("用户名或密码超出长度限制，请重新输入"),
 			QMessageBox::Ok | QMessageBox::Default,
 			QMessageBox::Cancel | QMessageBox::Escape, 0);
 		ui.lineEdit->clear();
@@ -38,30 +43,76 @@ void LoginWindow::on_pushButton_clicked()
 
 	PackageHead temp = SendTest;
 	temp.isData = 0;
-	temp.type = 0x01;
+	temp.type = CLIENT_REQUIRE_LOGIN;
 	temp.dataLen = 40;
 	char ch[40];
 	memset(ch, 0, sizeof(ch));
 	memcpy(ch, username.toLocal8Bit(),username.toLocal8Bit().length());
 	memcpy(ch+20, username.toLocal8Bit(), username.toLocal8Bit().length());
 
-	this->tcpclient->Send(temp, ch);
+	//this->tcpclient->Send(temp, ch);
 	ui.pushButton->setEnabled(false);
+	
+	//// test
+	this->hide();
+	emit sendsignal();	// 参数需发送设置信息
+	////
+
 	return;
+}
+
+void LoginWindow::handle_new_password(QString old_password, QString new_password)
+{
+	// 请求修改密码
+	PackageHead temp = SendTest;
+	temp.isData = 0;
+	temp.type = CLIENT_CHANGE_PASSWORD;
+	temp.dataLen = 40;
+	char ch[40];
+	memset(ch, 0, sizeof(ch));
+	memcpy(ch, old_password.toLocal8Bit(), old_password.toLocal8Bit().length());
+	memcpy(ch + 20, new_password.toLocal8Bit(), new_password.toLocal8Bit().length());
+
+	this->tcpclient->Send(temp, ch);
 }
 
 void LoginWindow::ReceivePack(PackageHead head, char *info)
 {
 	if (head.isData == 1)
 	{
-		return;
+		switch (head.type) {
+			case SERVER_RETUEN_ERROR_D: {
+				tcpclient->disconnect();
+				break;
+			}
+			case SERVER_RETURN_ERROR_C: {
+				if (info[0] == NO_SUCH_USER) {
+
+				}
+				else if (info[0] == ENFORCE_CHANGE_PASSWORD) {
+
+				}
+				else
+					// nothing
+					break;
+			}
+			case SERVER_ACK_CHANGE_PASSWORD: {
+				break;
+			}
+			case SERVER_RETURN_SETTING: {
+
+				break;
+			}
+			default:
+				break;
+		}
 	}
 	else
 	{
-		if (head.type == SERVER_ACK_MESSAGE)
+		if (head.type == SERVER_RETURN_SETTING)	// 确认登陆
 		{
 			this->hide();
-			emit sendsignal();
+			emit sendsignal();	// 参数需发送设置信息
 		}
 	}
 	return;

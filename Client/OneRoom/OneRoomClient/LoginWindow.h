@@ -27,6 +27,7 @@
 #pragma comment (lib,"Dwmapi.lib") // Adds missing library, fixes error LNK2019: unresolved external symbol __imp__DwmExtendFrameIntoClientArea 
 #pragma comment (lib,"user32.lib")
 #include "Socket.h"
+#include "ChangePasswordWindow.h"
 
 class LoginWindow : public QMainWindow
 {
@@ -36,12 +37,15 @@ public:
 	LoginWindow(QWidget *parent = Q_NULLPTR);
 	Socket *tcpclient;
 private:
-	
 	Ui::LoginWindow ui;
+	ChangePasswordWindow *ChangePwWin;
+
 private slots:
 	void on_pushButton_clicked();
+
 public slots:
 	void ReceivePack(PackageHead value, char *info);
+	void handle_new_password(QString old_password, QString new_password);
 
 signals:
 	void sendsignal();

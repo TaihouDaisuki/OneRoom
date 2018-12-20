@@ -22,9 +22,6 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 
 	updateUserList();
 	// connect
-	//connect(ui.sendMsgBtn, SIGNAL(clicked()), this, SLOT(on_sendMsgBtn_clicked));
-	//this->tcpclient = new Socket;
-	//connect(this->tcpclient, &TcpClient::getNewmessage, this, &OneRoomClient::getMess);
 
 	// 初始化子窗口
 	loginWindow = new LoginWindow(this);
@@ -155,6 +152,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	{
 		fileNames = fileDialog->selectedFiles();
 	}
+	// send
 
 }
 
@@ -176,7 +174,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 	{
 		fileNames = fileDialog->selectedFiles();
 	}
-
+	// send
 }
 
 void OneRoomClient::on_settingBtn_clicked()
