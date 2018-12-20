@@ -10,6 +10,7 @@ UserInfo::UserInfo(const UserInfo &info)
 	u_loginTime = info.u_loginTime;
 	u_lineHeight = info.u_lineHeight;
 	u_pixmap = info.u_pixmap;
+	u_password = info.u_password;
 }
 
 UserInfo::UserInfo(QWidget *parent) : QWidget(parent)
@@ -22,11 +23,12 @@ UserInfo::UserInfo(QWidget *parent) : QWidget(parent)
 	u_pixmap = QPixmap(":/Resources/Resources/img/Customer Copy.png");	// Í·Ïñ
 }
 
-UserInfo::UserInfo(QString nickName, QString userName, QString loginTime)
+UserInfo::UserInfo(QString nickName, QString userName, QString loginTime, QString password)
 {
 	u_nickName = nickName;
 	u_userName = userName;
 	u_loginTime = loginTime;
+	u_password = password;
 }
 
 void UserInfo::operator=(const UserInfo &info)
@@ -36,13 +38,15 @@ void UserInfo::operator=(const UserInfo &info)
 	u_loginTime = info.u_loginTime;
 	u_lineHeight = info.u_lineHeight;
 	u_pixmap = info.u_pixmap;
+	u_password = info.u_password;
 }
 
-void UserInfo::setInfo(QString nickName, QString userName, QString loginTime)
+void UserInfo::setInfo(QString nickName, QString userName, QString loginTime, QString password)
 {
 	u_nickName = nickName;
 	u_userName = userName;
 	u_loginTime = loginTime;
+	u_password = password;
 
 	this->update();
 }

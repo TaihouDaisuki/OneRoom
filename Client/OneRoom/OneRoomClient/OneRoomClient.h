@@ -34,11 +34,13 @@ private slots:
 	void on_logOutBtn_clicked();
 	void on_package_arrived(PackageHead head, char* data);
 	void on_settingBtn_clicked();
-	void reshow_mainwindow();
+	void reshow_mainwindow(QString userName, QString password, int histroyListNum);
+
+	void send_history_num_setting(int num);
+	void send_password_setting(QString password);
 
 signals:
-	void change_password_success();
-	void change_password_fail();
+	void change_password_result(int result);
 
 private:
 	Ui::OneRoomClientClass ui;

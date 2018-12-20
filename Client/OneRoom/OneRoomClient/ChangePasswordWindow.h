@@ -13,6 +13,8 @@ public:
 	void setOldPassword(QString password);
 private slots:
 	void on_confirmButton_clicked();
+public slots:
+	void handle_password_result(int result);
 
 signals:
 	void new_password(QString password);

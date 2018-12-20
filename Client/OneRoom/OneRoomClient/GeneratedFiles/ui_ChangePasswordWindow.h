@@ -11,11 +11,9 @@
 
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QGridLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
 #include <QtWidgets/QPushButton>
-#include <QtWidgets/QSpacerItem>
 #include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -23,13 +21,10 @@ QT_BEGIN_NAMESPACE
 class Ui_changePasswordWindow
 {
 public:
-    QGridLayout *gridLayout;
     QLabel *label;
     QLineEdit *oldPwLineEdit;
     QLabel *label_2;
     QLineEdit *newPwLineEdit;
-    QSpacerItem *horizontalSpacer_2;
-    QSpacerItem *horizontalSpacer_3;
     QPushButton *confirmButton;
 
     void setupUi(QWidget *changePasswordWindow)
@@ -39,41 +34,26 @@ public:
         changePasswordWindow->resize(300, 250);
         changePasswordWindow->setMinimumSize(QSize(300, 250));
         changePasswordWindow->setMaximumSize(QSize(300, 250));
-        gridLayout = new QGridLayout(changePasswordWindow);
-        gridLayout->setObjectName(QStringLiteral("gridLayout"));
         label = new QLabel(changePasswordWindow);
         label->setObjectName(QStringLiteral("label"));
-
-        gridLayout->addWidget(label, 0, 1, 1, 1);
-
+        label->setGeometry(QRect(23, 48, 101, 20));
+        QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+        sizePolicy.setHorizontalStretch(0);
+        sizePolicy.setVerticalStretch(0);
+        sizePolicy.setHeightForWidth(label->sizePolicy().hasHeightForWidth());
+        label->setSizePolicy(sizePolicy);
         oldPwLineEdit = new QLineEdit(changePasswordWindow);
         oldPwLineEdit->setObjectName(QStringLiteral("oldPwLineEdit"));
-
-        gridLayout->addWidget(oldPwLineEdit, 0, 2, 1, 1);
-
+        oldPwLineEdit->setGeometry(QRect(130, 48, 124, 20));
         label_2 = new QLabel(changePasswordWindow);
         label_2->setObjectName(QStringLiteral("label_2"));
-
-        gridLayout->addWidget(label_2, 1, 1, 1, 1);
-
+        label_2->setGeometry(QRect(23, 113, 101, 20));
         newPwLineEdit = new QLineEdit(changePasswordWindow);
         newPwLineEdit->setObjectName(QStringLiteral("newPwLineEdit"));
-
-        gridLayout->addWidget(newPwLineEdit, 1, 2, 1, 1);
-
-        horizontalSpacer_2 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        gridLayout->addItem(horizontalSpacer_2, 0, 3, 1, 1);
-
-        horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
-
-        gridLayout->addItem(horizontalSpacer_3, 0, 0, 1, 1);
-
+        newPwLineEdit->setGeometry(QRect(130, 113, 124, 20));
         confirmButton = new QPushButton(changePasswordWindow);
         confirmButton->setObjectName(QStringLiteral("confirmButton"));
-
-        gridLayout->addWidget(confirmButton, 2, 1, 1, 2);
-
+        confirmButton->setGeometry(QRect(46, 178, 211, 23));
 
         retranslateUi(changePasswordWindow);
 

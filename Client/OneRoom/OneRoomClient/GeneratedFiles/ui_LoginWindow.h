@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'LoginWindow.ui'
 **
-** Created by: Qt User Interface Compiler version 5.11.2
+** Created by: Qt User Interface Compiler version 5.11.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -48,7 +48,7 @@ public:
         pushButton->setGeometry(QRect(210, 240, 41, 31));
         label = new QLabel(centralWidget);
         label->setObjectName(QStringLiteral("label"));
-        label->setGeometry(QRect(60, 20, 150, 150));
+        label->setGeometry(QRect(80, 20, 150, 150));
         LoginWindow->setCentralWidget(centralWidget);
 
         retranslateUi(LoginWindow);

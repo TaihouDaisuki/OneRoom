@@ -21,17 +21,20 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	userList.append(UserInfo("1234567890", "number", QString::number(QDateTime::currentDateTime().toTime_t())));
 
 	updateUserList();
-	// connect
 
 	// 初始化子窗口
 	loginWindow = new LoginWindow(this);
 	loginWindow->tcpclient = &this->socket;
 	loginWindow->show();
-
 	settingBoard = new SettingBoard(this);
-
+	
+	// connect
 	connect(this->loginWindow, &LoginWindow::sendsignal, this, &OneRoomClient::reshow_mainwindow);
+	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
 	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
+
+	connect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+	connect(this->settingBoard, &SettingBoard::historyList_num, this, &OneRoomClient::send_history_num_setting);
 
 	setWindowOpacity(0.9);
 }
@@ -197,7 +200,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 				break;
 			}
 			case SERVER_ACK_CHANGE_PASSWORD:
-				emit change_password_success();
+				emit change_password_result(OK);
 				break;
 			case SERVER_RETURN_SETTING:
 				// 确认登陆成功
@@ -210,7 +213,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 				else if (data[0] == PASSWORD_ERROR) {
 					// 改密码失败，原密码错误
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("原密码错误"));
-					emit change_password_fail();
+					emit change_password_result(ERROR);
 				}
 				else {
 					// nothing
@@ -249,6 +252,16 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 
 	}
 
+}
+
+void OneRoomClient::send_history_num_setting(int num)
+{
+
+}
+
+void OneRoomClient::send_password_setting(QString password)
+{
+	//emit change_password_result(OK);
 }
 
 // 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从data指向地址开始填入, 返回填入长度
@@ -372,11 +385,19 @@ void OneRoomClient::on_logOutBtn_clicked() {
 
 }
 
-void OneRoomClient::reshow_mainwindow()
+void OneRoomClient::reshow_mainwindow(QString userName, QString password, int histroyListNum)
 {
+	// 初始值设置
+	currentUser.setInfo("", userName, QString::number(QDateTime::currentDateTime().toTime_t()), password);
+	
 	this->show();
 	disconnect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
+	disconnect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
+	disconnect(this->loginWindow, &LoginWindow::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+
 	connect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
+	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this, &OneRoomClient::send_password_setting);
+	connect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
 }
 
 void OneRoomClient::logout()
@@ -384,5 +405,10 @@ void OneRoomClient::logout()
 	this->hide();
 	loginWindow->show();
 	disconnect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
+	disconnect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this, &OneRoomClient::send_password_setting);
+	disconnect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+
 	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
+	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
+	connect(this->loginWindow, &LoginWindow::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
 }

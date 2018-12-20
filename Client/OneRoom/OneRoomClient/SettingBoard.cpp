@@ -3,6 +3,8 @@
 SettingBoard::SettingBoard(QWidget *parent)
 {
 	ui.setupUi(this);
+	//setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;color:white");
+	setWindowOpacity(0.8);
 	changePasswordWindow = new ChangePasswordWindow(this);
 }
 

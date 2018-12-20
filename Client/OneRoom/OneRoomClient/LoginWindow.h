@@ -38,7 +38,7 @@ public:
 	Socket *tcpclient;
 private:
 	Ui::LoginWindow ui;
-	ChangePasswordWindow *ChangePwWin;
+	ChangePasswordWindow *changePwWin;
 
 private slots:
 	void on_pushButton_clicked();
@@ -48,5 +48,6 @@ public slots:
 	void handle_new_password(QString old_password, QString new_password);
 
 signals:
-	void sendsignal();
+	void sendsignal(QString userName, QString password, int histroyListNum);
+	void change_password_result(int result);
 };

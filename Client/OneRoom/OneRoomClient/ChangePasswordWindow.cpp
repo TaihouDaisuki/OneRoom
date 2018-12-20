@@ -1,6 +1,8 @@
 #include "ChangePasswordWindow.h"
 #include <qmessagebox.h>
 #include <qregexp.h>
+#include "Define.h"
+#include <qmessagebox.h>
 
 ChangePasswordWindow::ChangePasswordWindow(QWidget *parent)
 {
@@ -9,13 +11,29 @@ ChangePasswordWindow::ChangePasswordWindow(QWidget *parent)
 	
 	ui.oldPwLineEdit->setEchoMode(QLineEdit::Password);
 	ui.newPwLineEdit->setEchoMode(QLineEdit::Password);
-	
+	//setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
+	setWindowOpacity(0.8);
+
 	//ui.oldPwLineEdit->setValidator(new QRegExpValidator(regexp, this);
 }
 
 void ChangePasswordWindow::setOldPassword(QString password)
 {
 	oldPassword = password;
+}
+
+void ChangePasswordWindow::handle_password_result(int result)
+{
+	if (result == OK) {
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("ÃÜÂëÐÞ¸Ä³É¹¦"));
+		this->hide();
+	}
+	else {
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("Ô­ÃÜÂë´íÎó"));
+	}
+
+	ui.oldPwLineEdit->clear();
+	ui.newPwLineEdit->clear();
 }
 
 void ChangePasswordWindow::on_confirmButton_clicked()

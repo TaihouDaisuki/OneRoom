@@ -19,10 +19,10 @@ LoginWindow::LoginWindow(QWidget *parent)
 	ui.lineEdit_2->setEchoMode(QLineEdit::Password);
 
 	// child window
-	ChangePwWin = new ChangePasswordWindow(this);
+	changePwWin = new ChangePasswordWindow(this);
 	
 	// connect
-	connect(ChangePwWin, SIGNAL(new_password(QString password)), this, SLOT(handle_new_password(QString password)));
+	connect(changePwWin, &ChangePasswordWindow::new_password, this, &LoginWindow::handle_new_password);
 }
 
 void LoginWindow::on_pushButton_clicked()
@@ -53,10 +53,6 @@ void LoginWindow::on_pushButton_clicked()
 	//this->tcpclient->Send(temp, ch);
 	ui.pushButton->setEnabled(false);
 	
-	//// test
-	this->hide();
-	emit sendsignal();	// 参数需发送设置信息
-	////
 
 	return;
 }
@@ -64,9 +60,10 @@ void LoginWindow::on_pushButton_clicked()
 void LoginWindow::handle_new_password(QString old_password, QString new_password)
 {
 	// 请求修改密码
-	PackageHead temp = SendTest;
+	PackageHead temp;
 	temp.isData = 0;
 	temp.type = CLIENT_CHANGE_PASSWORD;
+	temp.isCut = 0;
 	temp.dataLen = 40;
 	char ch[40];
 	memset(ch, 0, sizeof(ch));
@@ -87,20 +84,28 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 			}
 			case SERVER_RETURN_ERROR_C: {
 				if (info[0] == NO_SUCH_USER) {
-
+					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("不存在的用户名"));
+					ui.lineEdit->clear();
+					ui.lineEdit_2->clear();
 				}
 				else if (info[0] == ENFORCE_CHANGE_PASSWORD) {
-
+					changePwWin->show();
+					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("首次登陆请修改密码"));
 				}
+				else if (info[0] == PASSWORD_ERROR)
+					emit change_password_result(ERROR);
 				else
-					// nothing
-					break;
+					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("SERVER_RETURN_ERROR_C ERROR CODE ERROR"));
+				break;
 			}
 			case SERVER_ACK_CHANGE_PASSWORD: {
+				emit change_password_result(OK);
 				break;
 			}
 			case SERVER_RETURN_SETTING: {
-
+				this->hide();
+				emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), ntohl(*(int*)info));	// 参数需发送设置信息
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("登陆成功！"));
 				break;
 			}
 			default:
@@ -109,11 +114,7 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 	}
 	else
 	{
-		if (head.type == SERVER_RETURN_SETTING)	// 确认登陆
-		{
-			this->hide();
-			emit sendsignal();	// 参数需发送设置信息
-		}
+
 	}
 	return;
 }

@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'SettingBoard.ui'
 **
-** Created by: Qt User Interface Compiler version 5.11.2
+** Created by: Qt User Interface Compiler version 5.11.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -12,7 +12,6 @@
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QGridLayout>
-#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSpacerItem>
@@ -25,16 +24,15 @@ QT_BEGIN_NAMESPACE
 class Ui_settingBoard
 {
 public:
-    QHBoxLayout *horizontalLayout;
     QTabWidget *tabWidget;
     QWidget *generalTab;
-    QGridLayout *gridLayout_3;
+    QGridLayout *gridLayout;
     QSpacerItem *horizontalSpacer_3;
-    QPushButton *changeButton;
-    QLabel *label;
     QSpacerItem *horizontalSpacer_4;
-    QPushButton *cancelButton;
     QSpinBox *spinBox;
+    QLabel *label;
+    QPushButton *changeButton;
+    QPushButton *cancelButton;
     QWidget *securityTab;
     QGridLayout *gridLayout_2;
     QPushButton *changePasswordBtn;
@@ -48,43 +46,42 @@ public:
         settingBoard->resize(426, 283);
         settingBoard->setMinimumSize(QSize(426, 283));
         settingBoard->setMaximumSize(QSize(426, 283));
-        horizontalLayout = new QHBoxLayout(settingBoard);
-        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
         tabWidget = new QTabWidget(settingBoard);
         tabWidget->setObjectName(QStringLiteral("tabWidget"));
+        tabWidget->setGeometry(QRect(9, 9, 411, 271));
         generalTab = new QWidget();
         generalTab->setObjectName(QStringLiteral("generalTab"));
-        gridLayout_3 = new QGridLayout(generalTab);
-        gridLayout_3->setObjectName(QStringLiteral("gridLayout_3"));
+        gridLayout = new QGridLayout(generalTab);
+        gridLayout->setObjectName(QStringLiteral("gridLayout"));
         horizontalSpacer_3 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_3->addItem(horizontalSpacer_3, 0, 0, 1, 1);
-
-        changeButton = new QPushButton(generalTab);
-        changeButton->setObjectName(QStringLiteral("changeButton"));
-
-        gridLayout_3->addWidget(changeButton, 1, 3, 1, 1);
-
-        label = new QLabel(generalTab);
-        label->setObjectName(QStringLiteral("label"));
-
-        gridLayout_3->addWidget(label, 0, 1, 1, 1);
+        gridLayout->addItem(horizontalSpacer_3, 0, 0, 1, 1);
 
         horizontalSpacer_4 = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-        gridLayout_3->addItem(horizontalSpacer_4, 0, 4, 1, 1);
-
-        cancelButton = new QPushButton(generalTab);
-        cancelButton->setObjectName(QStringLiteral("cancelButton"));
-
-        gridLayout_3->addWidget(cancelButton, 1, 2, 1, 1);
+        gridLayout->addItem(horizontalSpacer_4, 0, 4, 1, 1);
 
         spinBox = new QSpinBox(generalTab);
         spinBox->setObjectName(QStringLiteral("spinBox"));
         spinBox->setMinimum(10);
         spinBox->setValue(10);
 
-        gridLayout_3->addWidget(spinBox, 0, 2, 1, 2);
+        gridLayout->addWidget(spinBox, 0, 3, 1, 1);
+
+        label = new QLabel(generalTab);
+        label->setObjectName(QStringLiteral("label"));
+
+        gridLayout->addWidget(label, 0, 2, 1, 1);
+
+        changeButton = new QPushButton(generalTab);
+        changeButton->setObjectName(QStringLiteral("changeButton"));
+
+        gridLayout->addWidget(changeButton, 1, 4, 1, 1);
+
+        cancelButton = new QPushButton(generalTab);
+        cancelButton->setObjectName(QStringLiteral("cancelButton"));
+
+        gridLayout->addWidget(cancelButton, 1, 3, 1, 1);
 
         tabWidget->addTab(generalTab, QString());
         securityTab = new QWidget();
@@ -106,9 +103,6 @@ public:
 
         tabWidget->addTab(securityTab, QString());
 
-        horizontalLayout->addWidget(tabWidget);
-
-
         retranslateUi(settingBoard);
 
         tabWidget->setCurrentIndex(0);
@@ -120,8 +114,8 @@ public:
     void retranslateUi(QWidget *settingBoard)
     {
         settingBoard->setWindowTitle(QApplication::translate("settingBoard", "Form", nullptr));
-        changeButton->setText(QApplication::translate("settingBoard", "\346\233\264\346\224\271", nullptr));
         label->setText(QApplication::translate("settingBoard", "\345\233\236\347\234\213\347\232\204\345\216\206\345\217\262\347\272\252\345\275\225\346\235\241\346\225\260\357\274\232", nullptr));
+        changeButton->setText(QApplication::translate("settingBoard", "\346\233\264\346\224\271", nullptr));
         cancelButton->setText(QApplication::translate("settingBoard", "\345\217\226\346\266\210", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(generalTab), QApplication::translate("settingBoard", "\345\270\270\351\200\211\351\241\271", nullptr));
         changePasswordBtn->setText(QApplication::translate("settingBoard", "\344\277\256\346\224\271\345\257\206\347\240\201", nullptr));

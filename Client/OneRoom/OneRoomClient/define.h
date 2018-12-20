@@ -1,7 +1,7 @@
 #pragma once
 #define MAX_USERNAME_SIZE 20	// 最长用户名大小(含\0)
 #define PACKAGE_HEAD_SIZE 8		
-#define PACKAGE_MAX_SIZE 2048	// 最长包大小
+#define PACKAGE_DATA_MAX_SIZE 2048	// 最长包大小
 #define MIN_PASSWORD_SIZE 10	// 最短密码长度
 
 // 消息类型
@@ -32,6 +32,10 @@
 #define PASSWORD_ERROR 0x02 // 密码错误
 #define ENFORCE_OFFLINE 0x03 // 强制下线
 #define SEND_MESSAGE_FAIL 0x04 // 发送失败
+
+// 客户端用
+#define ERROR 0
+#define OK 1
 
 struct PackageHead {
 	unsigned char isData;
