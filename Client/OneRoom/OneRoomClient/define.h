@@ -1,8 +1,12 @@
 #pragma once
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32")
+
 #define MAX_USERNAME_SIZE 20	// 最长用户名大小(含\0)
 #define PACKAGE_HEAD_SIZE 8		
 #define PACKAGE_DATA_MAX_SIZE 2048	// 最长包大小
 #define MIN_PASSWORD_SIZE 10	// 最短密码长度
+#define MAX_PASSWORD_SIZE 20	// 含\0
 
 // 消息类型
 #define DATA_TYPE_SINGLE 0x00
