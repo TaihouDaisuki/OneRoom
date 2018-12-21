@@ -34,6 +34,7 @@ void ChangePasswordWindow::handle_password_result(int result)
 
 	ui.oldPwLineEdit->clear();
 	ui.newPwLineEdit->clear();
+	this->hide();
 }
 
 void ChangePasswordWindow::on_confirmButton_clicked()

@@ -52,12 +52,13 @@ void LoginWindow::on_pushButton_clicked()
 
 	//this->tcpclient->Send(temp, ch);
 	ui.pushButton->setEnabled(false);
-	
-
+	this->hide();
+	emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), ntohl(10));	// 参数需发送设置信息
+	QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("登陆成功！"));
 	return;
 }
 
-void LoginWindow::handle_new_password(QString old_password, QString new_password)
+void LoginWindow::handle_new_password(QString new_password)
 {
 	// 请求修改密码
 	PackageHead temp;
@@ -67,7 +68,7 @@ void LoginWindow::handle_new_password(QString old_password, QString new_password
 	temp.dataLen = 40;
 	char ch[40];
 	memset(ch, 0, sizeof(ch));
-	memcpy(ch, old_password.toLocal8Bit(), old_password.toLocal8Bit().length());
+	memcpy(ch, init_password.toLocal8Bit(), init_password.toLocal8Bit().length());
 	memcpy(ch + 20, new_password.toLocal8Bit(), new_password.toLocal8Bit().length());
 
 	this->tcpclient->Send(temp, ch);
@@ -89,6 +90,7 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 					ui.lineEdit_2->clear();
 				}
 				else if (info[0] == ENFORCE_CHANGE_PASSWORD) {
+					init_password = ui.lineEdit_2->text();	// 要求强制修改密码代表当前用户输入的就是初始密码
 					changePwWin->show();
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("首次登陆请修改密码"));
 				}
@@ -99,7 +101,8 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 				break;
 			}
 			case SERVER_ACK_CHANGE_PASSWORD: {
-				emit change_password_result(OK);
+				emit change_password_result(OK);	// 不代表登陆成功，需重新登陆
+				ui.lineEdit_2->clear();	// 清空密码
 				break;
 			}
 			case SERVER_RETURN_SETTING: {

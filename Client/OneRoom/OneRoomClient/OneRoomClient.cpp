@@ -30,7 +30,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	
 	// connect
 	connect(this->loginWindow, &LoginWindow::sendsignal, this, &OneRoomClient::reshow_mainwindow);
-	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
+//	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
 	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 
 	connect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
@@ -110,6 +110,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 			handleMessage(message, item, msg, time, Message::User_Me);
 			// 调用send函数
 			socket.Send(head, data);
+			delete data;
 			sendMsgQueue.push_back(message);
 		}
 		//else {
@@ -256,12 +257,40 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 
 void OneRoomClient::send_history_num_setting(int num)
 {
+	int len = sizeof(int);
+	PackageHead head;
+	char* data = new char[len];
+	head.isData = 1;
+	head.dataLen = len;
+	head.isCut = 0;
+	head.type = CLIENT_CHANGE_SETTING;
 
+	*(int*)data = htonl(num);
+
+	socket.Send(head, data);
+
+	delete data;
 }
 
 void OneRoomClient::send_password_setting(QString password)
 {
-	//emit change_password_result(OK);
+	QByteArray pwByteArray;
+	PackageHead head;
+	char* data = new char[MAX_PASSWORD_SIZE * 2];
+	head.isData = 1;
+	head.dataLen = MAX_PASSWORD_SIZE * 2;
+	head.isCut = 0;
+	head.type = CLIENT_CHANGE_PASSWORD;
+
+	pwByteArray = currentUser.password().toLocal8Bit();
+	memcpy(data, pwByteArray.data(), MAX_PASSWORD_SIZE);
+
+	pwByteArray = password.toLocal8Bit();
+	memcpy(data + MAX_PASSWORD_SIZE, pwByteArray.data(), MAX_PASSWORD_SIZE);
+
+	socket.Send(head, data);
+
+	delete data;
 }
 
 // 将itemList中的用户名提取出来加上当前用户的用户名后转按发送格式从data指向地址开始填入, 返回填入长度
@@ -381,8 +410,8 @@ bool OneRoomClient::eventFilter(QObject *obj, QEvent *e)
 }
 
 void OneRoomClient::on_logOutBtn_clicked() {
-	this->socket.DisConnect();
-
+	socket.DisConnect();
+	logout();
 }
 
 void OneRoomClient::reshow_mainwindow(QString userName, QString password, int histroyListNum)
