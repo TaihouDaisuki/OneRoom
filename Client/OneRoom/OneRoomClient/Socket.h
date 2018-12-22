@@ -39,5 +39,5 @@ public slots:
 
 signals:
 	void getNewmessage(PackageHead type, char *info);
-
+	void sock_error_occurred(QString error_msg);
 };

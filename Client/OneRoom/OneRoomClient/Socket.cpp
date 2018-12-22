@@ -7,16 +7,6 @@ Socket::Socket(QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f)
 	tcpSocket = NULL;
 	sslSocket = NULL;
 
-	// connect
-#ifndef SSL
-	connect(tcpSocket, SIGNAL(QAbstractSocket::readyRead()), this, SLOT(dataReceived()));
-	connect(tcpSocket, SIGNAL(QAbstractSocket::disconnected()), this, SLOT(socket_disconnected()));
-	connect(tcpSocket, SIGNAL(QAbstractSocket::error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
-#else
-	connect(sslSocket, SIGNAL(QAbstractSocket::readyRead()), this, SLOT(dataReceived()));
-	connect(sslSocket, SIGNAL(QAbstractSocket::disconnected()), this, SLOT(socket_disconnected()));
-	connect(sslSocket, SIGNAL(QAbstractSocket::error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
-#endif
 }
 
 int Socket::Send(PackageHead head, const char * data)
@@ -46,6 +36,9 @@ int Socket::Connect()
 		tcpSocket = new QTcpSocket(this);
 	//std::cout << "connect to " << this->ip << ":" << this->port << std::endl;
 	tcpSocket->connectToHost(ip.c_str(), port);
+	connect(tcpSocket, SIGNAL(QAbstractSocket::readyRead()), this, SLOT(dataReceived()));
+	connect(tcpSocket, SIGNAL(QAbstractSocket::disconnected()), this, SLOT(socket_disconnected()));
+	connect(tcpSocket, SIGNAL(QAbstractSocket::error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
 #else
 	if (loadSslFiles())
 	{
@@ -58,6 +51,9 @@ int Socket::Connect()
 	{
 		QMessageBox::warning(this, "SSL File Error", "Load SSL Files failed.");
 	}
+	connect(sslSocket, SIGNAL(QAbstractSocket::readyRead()), this, SLOT(dataReceived()));
+	connect(sslSocket, SIGNAL(QAbstractSocket::disconnected()), this, SLOT(socket_disconnected()));
+	connect(sslSocket, SIGNAL(QAbstractSocket::error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
 #endif
 	return 0;
 }
@@ -93,30 +89,30 @@ void Socket::dataReceived()
 
 void Socket::socket_disconnected()
 {
-	QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("连接已经断开"));
+	emit sock_error_occurred(QString::fromLocal8Bit("连接已经断开"));
 }
 
 void Socket::socket_error(QAbstractSocket::SocketError socketError)
 {
 #ifndef SSL
-	QMessageBox::warning(this, tr("FBI Warning"), tcpSocket->errorString());
+	emit sock_error_occurred(tcpSocket->errorString());
 #else
-	QMessageBox::warning(this, tr("FBI Warning"), sslSocket->errorString());
+	emit sock_error_occurred(sslSocket->errorString());
 #endif
 }
 
 int Socket::loadSslFiles()
 {
-	//bool openOk = false;
-	//QFile certFile(QDir::currentPath() + QString(":/ssl/server.crt"));
-	//openOk = certFile.open(QIODevice::ReadOnly);
-	//s_certificate = QSslCertificate(certFile.readAll(), QSsl::Der);
-	//openOk &= !s_certificate.isNull();
+	bool openOk = false;
+	QFile certFile(QDir::currentPath() + QString(":/ssl/server.crt"));
+	openOk = certFile.open(QIODevice::ReadOnly);
+	s_caCertificate = QSslCertificate(certFile.readAll(), QSsl::Der);
+	openOk &= !s_caCertificate.isNull();
 
-	//QFile keyFile(QDir::currentPath() + QString(":/ssl/ca.key"));
-	//openOk &= keyFile.open(QIODevice::ReadOnly);
-	//s_privateKey = QSslKey(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
-	//openOk &= !s_privateKey.isNull();
+	QFile keyFile(QDir::currentPath() + QString(":/ssl/ca.key"));
+	openOk &= keyFile.open(QIODevice::ReadOnly);
+	s_privateKey = QSslKey(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
+	openOk &= !s_privateKey.isNull();
 
 	//QFile peerFile(QDir::currentPath() + QString("/sslCert/cert.pem"));
 	//openOk &= peerFile.open(QIODevice::ReadOnly);
@@ -128,6 +124,6 @@ int Socket::loadSslFiles()
 	//caCerts << peerCert;
 	//s_caCertificates = caCerts;
 
-	//return openOk;
+	return openOk;
 
 }
