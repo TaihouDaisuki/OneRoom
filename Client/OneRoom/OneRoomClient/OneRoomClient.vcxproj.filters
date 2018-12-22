@@ -31,6 +31,9 @@
     <Filter Include="Resource Files\img">
       <UniqueIdentifier>{5d4e6a09-850c-4975-98af-e6878f5073c6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\ssl">
+      <UniqueIdentifier>{e21ae453-1b10-413f-b5df-4ac5e2cb0b82}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -115,5 +118,16 @@
     <ClInclude Include="Define.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ssl\ca.crt">
+      <Filter>Resource Files\ssl</Filter>
+    </None>
+    <None Include="Resources\ssl\ca.key">
+      <Filter>Resource Files\ssl</Filter>
+    </None>
+    <None Include="Resources\ssl\server.crt">
+      <Filter>Resource Files\ssl</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -27,7 +27,7 @@ LoginWindow::LoginWindow(QWidget *parent)
 
 void LoginWindow::on_pushButton_clicked()
 {
-	//tcpclient->Connect();
+	tcpclient->Connect();
 	QString username = ui.lineEdit->text();
 	QString password = ui.lineEdit_2->text();
 	if (username.toLocal8Bit().length() > MAX_USERNAME_SIZE || password.toLocal8Bit().length()>20)
@@ -50,11 +50,8 @@ void LoginWindow::on_pushButton_clicked()
 	memcpy(ch, username.toLocal8Bit(),username.toLocal8Bit().length());
 	memcpy(ch+20, username.toLocal8Bit(), username.toLocal8Bit().length());
 
-	//this->tcpclient->Send(temp, ch);
+	this->tcpclient->Send(temp, ch);
 	ui.pushButton->setEnabled(false);
-	this->hide();
-	emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), ntohl(10));	// 参数需发送设置信息
-	QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("登陆成功！"));
 	return;
 }
 
@@ -76,7 +73,7 @@ void LoginWindow::handle_new_password(QString new_password)
 
 void LoginWindow::ReceivePack(PackageHead head, char *info)
 {
-	if (head.isData == 1)
+	if (head.isData == 0)
 	{
 		switch (head.type) {
 			case SERVER_RETUEN_ERROR_D: {
