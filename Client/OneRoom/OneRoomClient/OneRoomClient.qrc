@@ -4,5 +4,7 @@
         <file>Resources/img/CustomerService.png</file>
         <file>Resources/img/loading4.gif</file>
         <file>Resources/img/oneroom.jpg</file>
+        <file>Resources/ssl/ca.key</file>
+        <file>Resources/ssl/server.crt</file>
     </qresource>
 </RCC>

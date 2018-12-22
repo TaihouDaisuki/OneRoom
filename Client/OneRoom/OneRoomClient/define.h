@@ -7,6 +7,7 @@
 #define PACKAGE_DATA_MAX_SIZE 2048	// 最长包大小
 #define MIN_PASSWORD_SIZE 10	// 最短密码长度
 #define MAX_PASSWORD_SIZE 20	// 含\0
+//#define SSL
 
 // 消息类型
 #define DATA_TYPE_SINGLE 0x00

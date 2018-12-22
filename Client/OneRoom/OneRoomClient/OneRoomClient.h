@@ -54,6 +54,8 @@ private:
 
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
 	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器
+	void setButtonDisable();
+	void setButtonEnable();
 	void logout();
 };
 

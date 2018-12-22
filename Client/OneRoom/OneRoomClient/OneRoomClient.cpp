@@ -42,6 +42,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 /* 事件处理函数 */
 void OneRoomClient::on_sendMsgBtn_clicked()
 {
+	setButtonDisable();
 	QString msg = ui.msgTextEdit->toPlainText();	// 提取输入框信息
 	ui.msgTextEdit->setPlainText("");	// 清空输入框
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
@@ -99,47 +100,25 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	memcpy(&data[length], msgByteArray.data(), msgByteArray.length() + 1);
 
 	// 发送package
-	bool isSending = true;	// 发送状态
+	handleMessageTime(time);
 
-	if (true) {//if (ui.msgListWidget->count() % ) {	// 测试用，交换收发方
-		if (isSending) {
-			handleMessageTime(time);
+	Message* message = new Message(ui.msgListWidget->parentWidget());
+	QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+	handleMessage(message, item, msg, time, Message::User_Me);
+	// 调用send函数
+	socket.Send(head, data);
+	delete data;
+	sendMsgQueue.push_back(message);
 
-			Message* message = new Message(ui.msgListWidget->parentWidget());
-			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-			handleMessage(message, item, msg, time, Message::User_Me);
-			// 调用send函数
-			socket.Send(head, data);
-			delete data;
-			sendMsgQueue.push_back(message);
-		}
-		//else {
-		//	bool isOver = true;
-		//	for (int i = ui.msgListWidget->count() - 1; i > 0; i--) {
-		//		Message* message = (Message*)ui.msgListWidget->itemWidget(ui.msgListWidget->item(i));	// 当前选取的消息
-		//		if (message->text() == msg) {	// 处理刚发送的消息
-		//			isOver = false;
-		//			message->setTextSuccess();
-		//		}
-		//	}
-		//	if (isOver) {	// 
-		//		handleMessageTime(time);
-
-		//		Message* message = new Message(ui.msgListWidget->parentWidget());
-		//		QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-		//		handleMessage(message, item, msg, time, Message::User_Me);
-		//	}
-		//}
-
-		//清空临时条目列表
-		itemList.clear();
-		ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
-	}
-
+	//清空临时条目列表
+	itemList.clear();
+	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
+	setButtonEnable();
 }
 
 void OneRoomClient::on_sendFileBtn_clicked()
 {
+	setButtonDisable();
 	//定义文件对话框类
 	QFileDialog *fileDialog = new QFileDialog(this);
 	//定义文件对话框标题
@@ -157,11 +136,12 @@ void OneRoomClient::on_sendFileBtn_clicked()
 		fileNames = fileDialog->selectedFiles();
 	}
 	// send
-
+	setButtonEnable();
 }
 
 void OneRoomClient::on_sendImgBtn_clicked()
 {
+	setButtonDisable();
 	//定义文件对话框类
 	QFileDialog *fileDialog = new QFileDialog(this);
 	//定义文件对话框标题
@@ -179,6 +159,8 @@ void OneRoomClient::on_sendImgBtn_clicked()
 		fileNames = fileDialog->selectedFiles();
 	}
 	// send
+
+	setButtonEnable();
 }
 
 void OneRoomClient::on_settingBtn_clicked()
@@ -191,57 +173,25 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 	// 数据
 	if (head.isData == 1)
 	{
-		switch (head.type) {
-			case SERVER_ACK_MESSAGE: {
-				// 收到消息确认包，确认消息发送成功
-				Message *message;
-				message = sendMsgQueue.front();
-				sendMsgQueue.pop_front();
-				message->setTextSuccess();
-				break;
-			}
-			case SERVER_ACK_CHANGE_PASSWORD:
-				emit change_password_result(OK);
-				break;
-			case SERVER_RETURN_SETTING:
-				// 确认登陆成功
-				break;
-			case SERVER_RETURN_ERROR_C:
-				if (data[0] == SEND_MESSAGE_FAIL) {
-					// 发送消息失败
-					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败，指定用户不存在"));
-				}
-				else if (data[0] == PASSWORD_ERROR) {
-					// 改密码失败，原密码错误
-					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("原密码错误"));
-					emit change_password_result(ERROR);
-				}
-				else {
-					// nothing
-				}
-				break;
-			case SERVER_RETUEN_ERROR_D:
-				socket.disconnect();	// 断开连接
-				if (data[0] == ENFORCE_OFFLINE) {
-					// 强制下线
-					logout();	// 登出
-				}
-				else {
-					// nothing
-				}
-				break;
-			case SERVER_RETURN_USERLIST: {
-				// 更新用户列表
-				int num = head.dataLen / MAX_USERNAME_SIZE;
-				userList.clear();
-				UserInfo userInfo;
-				for (int i = 0; i < num; i++) {
-					//user.setInfo();
-					userList.append(userInfo);
-				}
-				updateUserList();
-				break;
-			}
+		switch (head.type & 0xf0) {
+		case DATA_TYPE_TEXT: {
+			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
+			handleMessageTime(time);
+			QString msg = QString(data+20);	// 提取输入框信息
+
+			Message* message = new Message(ui.msgListWidget->parentWidget());
+			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+			handleMessage(message, item, msg, time, Message::User_He);
+			break;
+		}
+		case DATA_TYPE_PICTURE: {
+
+			break;
+		}
+		case DATA_TYPE_FILE: {
+
+			break;
+		}
 			default:
 				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
 				return;
@@ -250,9 +200,68 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 	// 控制
 	else
 	{
-
+		switch (head.type) {
+		case SERVER_ACK_MESSAGE: {
+			// 收到消息确认包，确认消息发送成功
+			Message *message;
+			message = sendMsgQueue.front();
+			sendMsgQueue.pop_front();
+			message->setTextSuccess();
+			break;
+		}
+		case SERVER_ACK_CHANGE_PASSWORD:
+			emit change_password_result(OK);
+			break;
+		case SERVER_RETURN_SETTING:
+			// 确认登陆成功
+			break;
+		case SERVER_RETURN_ERROR_C:
+			if (data[0] == SEND_MESSAGE_FAIL) {
+				// 发送消息失败
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败，指定用户不存在"));
+			}
+			else if (data[0] == PASSWORD_ERROR) {
+				// 改密码失败，原密码错误
+				emit change_password_result(ERROR);
+			}
+			else {
+				// nothing
+			}
+			break;
+		case SERVER_RETUEN_ERROR_D:
+			socket.disconnect();	// 断开连接
+			if (data[0] == ENFORCE_OFFLINE) {
+				// 强制下线
+				logout();	// 登出
+			}
+			else {
+				// nothing
+			}
+			break;
+		case SERVER_RETURN_USERLIST: {
+			// 更新用户列表
+			int num = head.dataLen / MAX_USERNAME_SIZE;
+			userList.clear();
+			UserInfo userInfo;
+			for (int i = 0; i < num; i++) {
+				//user.setInfo();
+				userList.append(userInfo);
+			}
+			updateUserList();
+			break;
+		}
+		default:
+			QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+			return;
+		}
 	}
 
+}
+
+void OneRoomClient::on_logOutBtn_clicked() 
+{
+	socket.DisConnect();
+	logout();
 }
 
 void OneRoomClient::send_history_num_setting(int num)
@@ -409,11 +418,6 @@ bool OneRoomClient::eventFilter(QObject *obj, QEvent *e)
 	return false;
 }
 
-void OneRoomClient::on_logOutBtn_clicked() {
-	socket.DisConnect();
-	logout();
-}
-
 void OneRoomClient::reshow_mainwindow(QString userName, QString password, int histroyListNum)
 {
 	// 初始值设置
@@ -427,6 +431,26 @@ void OneRoomClient::reshow_mainwindow(QString userName, QString password, int hi
 	connect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
 	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this, &OneRoomClient::send_password_setting);
 	connect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+}
+
+void OneRoomClient::setButtonDisable()
+{
+	ui.logOutBtn->setDisabled(true);
+	ui.msgHistoryBtn->setDisabled(true);
+	ui.sendFileBtn->setDisabled(true);
+	ui.sendImgBtn->setDisabled(true);
+	ui.sendMsgBtn->setDisabled(true);
+	ui.settingBtn->setDisabled(true);
+}
+
+void OneRoomClient::setButtonEnable()
+{
+	ui.logOutBtn->setEnabled(true);
+	ui.msgHistoryBtn->setEnabled(true);
+	ui.sendFileBtn->setEnabled(true);
+	ui.sendImgBtn->setEnabled(true);
+	ui.sendMsgBtn->setEnabled(true);
+	ui.settingBtn->setEnabled(true);
 }
 
 void OneRoomClient::logout()
