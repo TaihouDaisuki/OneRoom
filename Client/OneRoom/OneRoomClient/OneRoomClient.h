@@ -34,6 +34,7 @@ private slots:
 	void on_logOutBtn_clicked();
 	void on_package_arrived(PackageHead head, char* const data);
 	void on_settingBtn_clicked();
+	void on_msgHistoryBtn_clicked();
 	void reshow_mainwindow(QString userName, QString password, int histroyListNum);
 	void handle_socket_error(QString errorMsg);
 	void send_history_num_setting(int num);
