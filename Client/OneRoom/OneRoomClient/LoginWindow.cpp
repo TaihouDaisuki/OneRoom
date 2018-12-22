@@ -51,7 +51,7 @@ void LoginWindow::on_pushButton_clicked()
 	memcpy(ch+20, password.toLocal8Bit(), password.toLocal8Bit().length());
 
 	this->tcpclient->Send(temp, ch);
-	ui.pushButton->setDisabled(true);
+	//ui.pushButton->setDisabled(true);
 	return;
 }
 

@@ -39,7 +39,7 @@ private slots:
 	void handle_socket_error(QString errorMsg);
 	void send_history_num_setting(int num);
 	void send_password_setting(QString password);
-
+	void on_userListWidget_itemDoubleClicked(QListWidgetItem *item);
 signals:
 	void change_password_result(int result);
 

@@ -34,6 +34,11 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	setWindowOpacity(0.9);
 }
 
+
+void OneRoomClient::on_userListWidget_itemDoubleClicked(QListWidgetItem *item)
+{
+
+}
 /* 事件处理函数 */
 void OneRoomClient::on_sendMsgBtn_clicked()
 {
