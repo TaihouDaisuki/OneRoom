@@ -10,6 +10,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 {
 	ui.setupUi(this);
 	ui.userListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);	// 设置多选
+	ui.msgListWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	QTextCodec::setCodecForLocale(QTextCodec::codecForName("GBK"));	// 设置本地编码
 	ui.msgTextEdit->setFontFamily("MicrosoftYaHei");
 	ui.msgTextEdit->setFontPointSize(12);
@@ -101,7 +102,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	case DATA_TYPE_GROUP: {
 		memcpy(&head, &GroupHead, sizeof(PackageHead));
 		// 添加数据
-		dataSize = (nCount * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
+		dataSize = 1 + (nCount * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
 		data = new(std::nothrow) char[dataSize];
 		if (data == NULL) {
 			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
@@ -208,7 +209,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		case DATA_TYPE_TEXT: {
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
-			QString msg = QString::fromLocal8Bit(data+20);	// 提取输入框信息
+			QString msg = QString::fromLocal8Bit(data+20);	
 
 			Message* message = new Message(ui.msgListWidget->parentWidget());
 			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
@@ -216,7 +217,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		}
 		case DATA_TYPE_PICTURE: {
+			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
+			handleMessageTime(time);
+			QString msg = QString::fromLocal8Bit(data + 20);
 
+			Message* message = new Message(ui.msgListWidget->parentWidget());
+			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+			handleMessage(message, item, msg, time, Message::User_He);
 			break;
 		}
 		case DATA_TYPE_FILE: {
@@ -275,7 +282,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			userList.clear();
 			UserInfo user;
 			for (int i = 0; i < num; i++) {
-				user.setInfo(QString(data + (i * userDataLen) + MAX_USERNAME_SIZE), QString(data + (i * userDataLen)));
+				user.setInfo(QString::fromLocal8Bit(data + (i * userDataLen) + MAX_USERNAME_SIZE), QString::fromLocal8Bit(data + (i * userDataLen)));
 				userList.append(user);
 			}
 			updateUserList();
@@ -349,7 +356,7 @@ int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* c
 	//char* data = new char[(nCount + 1) * USERNAME_BUFF_SIZE];
 	UserInfo *user;
 	QByteArray userNameByteArray;
-	int length = 0;
+	int length = 1;
 	
 	// 首字节为发送人数
 	data[0] = (char)nCount;
