@@ -49,8 +49,6 @@ int Socket::Connect()
 #else
 	if (loadSslFiles())
 	{
-		sslSocket->setLocalCertificate(s_certificate);
-		sslSocket->setPrivateKey(s_privateKey);
 		sslSocket->setCaCertificates(s_caCertificates);
 		sslSocket->setPeerVerifyMode(QSslSocket::VerifyPeer);
 		sslSocket->setPeerVerifyDepth(1);
@@ -109,16 +107,16 @@ void Socket::socket_error(QAbstractSocket::SocketError socketError)
 
 int Socket::loadSslFiles()
 {
-	bool openOk = false;
-	QFile certFile(QDir::currentPath() + QString(":/ssl/server.crt"));
-	openOk = certFile.open(QIODevice::ReadOnly);
-	s_certificate = QSslCertificate(certFile.readAll(), QSsl::Der);
-	openOk &= !s_certificate.isNull();
+	//bool openOk = false;
+	//QFile certFile(QDir::currentPath() + QString(":/ssl/server.crt"));
+	//openOk = certFile.open(QIODevice::ReadOnly);
+	//s_certificate = QSslCertificate(certFile.readAll(), QSsl::Der);
+	//openOk &= !s_certificate.isNull();
 
-	QFile keyFile(QDir::currentPath() + QString(":/ssl/ca.key"));
-	openOk &= keyFile.open(QIODevice::ReadOnly);
-	s_privateKey = QSslKey(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
-	openOk &= !s_privateKey.isNull();
+	//QFile keyFile(QDir::currentPath() + QString(":/ssl/ca.key"));
+	//openOk &= keyFile.open(QIODevice::ReadOnly);
+	//s_privateKey = QSslKey(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
+	//openOk &= !s_privateKey.isNull();
 
 	//QFile peerFile(QDir::currentPath() + QString("/sslCert/cert.pem"));
 	//openOk &= peerFile.open(QIODevice::ReadOnly);
@@ -130,6 +128,6 @@ int Socket::loadSslFiles()
 	//caCerts << peerCert;
 	//s_caCertificates = caCerts;
 
-	return openOk;
+	//return openOk;
 
 }

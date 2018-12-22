@@ -47,8 +47,8 @@ void LoginWindow::on_pushButton_clicked()
 	temp.dataLen = 40;
 	char ch[40];
 	memset(ch, 0, sizeof(ch));
-	memcpy(ch, username.toLocal8Bit(),username.toLocal8Bit().length());
-	memcpy(ch+20, username.toLocal8Bit(), username.toLocal8Bit().length());
+	memcpy(ch, username.toLocal8Bit(), username.toLocal8Bit().length());
+	memcpy(ch+20, password.toLocal8Bit(), password.toLocal8Bit().length());
 
 	this->tcpclient->Send(temp, ch);
 	ui.pushButton->setEnabled(false);
@@ -78,15 +78,20 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 		switch (head.type) {
 			case SERVER_RETUEN_ERROR_D: {
 				tcpclient->disconnect();
-				break;
-			}
-			case SERVER_RETURN_ERROR_C: {
 				if (info[0] == NO_SUCH_USER) {
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("不存在的用户名"));
 					ui.lineEdit->clear();
 					ui.lineEdit_2->clear();
 				}
-				else if (info[0] == ENFORCE_CHANGE_PASSWORD) {
+				else if (info[0] == PASSWORD_ERROR) {
+					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("密码错误"));
+					ui.lineEdit->clear();
+					ui.lineEdit_2->clear();
+				}
+				break;
+			}
+			case SERVER_RETURN_ERROR_C: {
+				if (info[0] == ENFORCE_CHANGE_PASSWORD) {
 					init_password = ui.lineEdit_2->text();	// 要求强制修改密码代表当前用户输入的就是初始密码
 					changePwWin->show();
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("首次登陆请修改密码"));

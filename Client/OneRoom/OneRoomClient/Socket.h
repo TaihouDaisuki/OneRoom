@@ -29,9 +29,8 @@ public:
 private:
 	int loadSslFiles();
 	/* ssl */
-	QSslCertificate s_certificate;
+	QSslCertificate s_caCertificate;
 	QSslKey s_privateKey;
-	//QList<QSslCertificate> s_caCertificates;
 
 public slots:
 	void dataReceived();

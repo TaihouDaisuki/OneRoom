@@ -173,57 +173,25 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 	// 数据
 	if (head.isData == 1)
 	{
-		switch (head.type) {
-			case SERVER_ACK_MESSAGE: {
-				// 收到消息确认包，确认消息发送成功
-				Message *message;
-				message = sendMsgQueue.front();
-				sendMsgQueue.pop_front();
-				message->setTextSuccess();
-				break;
-			}
-			case SERVER_ACK_CHANGE_PASSWORD:
-				emit change_password_result(OK);
-				break;
-			case SERVER_RETURN_SETTING:
-				// 确认登陆成功
-				break;
-			case SERVER_RETURN_ERROR_C:
-				if (data[0] == SEND_MESSAGE_FAIL) {
-					// 发送消息失败
-					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败，指定用户不存在"));
-				}
-				else if (data[0] == PASSWORD_ERROR) {
-					// 改密码失败，原密码错误
-					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("原密码错误"));
-					emit change_password_result(ERROR);
-				}
-				else {
-					// nothing
-				}
-				break;
-			case SERVER_RETUEN_ERROR_D:
-				socket.disconnect();	// 断开连接
-				if (data[0] == ENFORCE_OFFLINE) {
-					// 强制下线
-					logout();	// 登出
-				}
-				else {
-					// nothing
-				}
-				break;
-			case SERVER_RETURN_USERLIST: {
-				// 更新用户列表
-				int num = head.dataLen / MAX_USERNAME_SIZE;
-				userList.clear();
-				UserInfo userInfo;
-				for (int i = 0; i < num; i++) {
-					//user.setInfo();
-					userList.append(userInfo);
-				}
-				updateUserList();
-				break;
-			}
+		switch (head.type & 0xf0) {
+		case DATA_TYPE_TEXT: {
+			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
+			handleMessageTime(time);
+			QString msg = QString(data+20);	// 提取输入框信息
+
+			Message* message = new Message(ui.msgListWidget->parentWidget());
+			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+			handleMessage(message, item, msg, time, Message::User_He);
+			break;
+		}
+		case DATA_TYPE_PICTURE: {
+
+			break;
+		}
+		case DATA_TYPE_FILE: {
+
+			break;
+		}
 			default:
 				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
 				return;
@@ -232,7 +200,60 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 	// 控制
 	else
 	{
-
+		switch (head.type) {
+		case SERVER_ACK_MESSAGE: {
+			// 收到消息确认包，确认消息发送成功
+			Message *message;
+			message = sendMsgQueue.front();
+			sendMsgQueue.pop_front();
+			message->setTextSuccess();
+			break;
+		}
+		case SERVER_ACK_CHANGE_PASSWORD:
+			emit change_password_result(OK);
+			break;
+		case SERVER_RETURN_SETTING:
+			// 确认登陆成功
+			break;
+		case SERVER_RETURN_ERROR_C:
+			if (data[0] == SEND_MESSAGE_FAIL) {
+				// 发送消息失败
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败，指定用户不存在"));
+			}
+			else if (data[0] == PASSWORD_ERROR) {
+				// 改密码失败，原密码错误
+				emit change_password_result(ERROR);
+			}
+			else {
+				// nothing
+			}
+			break;
+		case SERVER_RETUEN_ERROR_D:
+			socket.disconnect();	// 断开连接
+			if (data[0] == ENFORCE_OFFLINE) {
+				// 强制下线
+				logout();	// 登出
+			}
+			else {
+				// nothing
+			}
+			break;
+		case SERVER_RETURN_USERLIST: {
+			// 更新用户列表
+			int num = head.dataLen / MAX_USERNAME_SIZE;
+			userList.clear();
+			UserInfo userInfo;
+			for (int i = 0; i < num; i++) {
+				//user.setInfo();
+				userList.append(userInfo);
+			}
+			updateUserList();
+			break;
+		}
+		default:
+			QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+			return;
+		}
 	}
 
 }
