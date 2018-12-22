@@ -95,7 +95,7 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 					init_password = ui.lineEdit_2->text();	// 要求强制修改密码代表当前用户输入的就是初始密码
 					changePwWin->show();
 					changePwWin->setFocus();
-					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("首次登陆请修改密码"));
+					QMessageBox::warning(changePwWin, tr("FBI Warning"), QString::fromLocal8Bit("首次登陆请修改密码"));
 				}
 				else if (info[0] == PASSWORD_ERROR)
 					emit change_password_result(ERROR);

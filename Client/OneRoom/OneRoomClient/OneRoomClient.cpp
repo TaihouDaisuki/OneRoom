@@ -88,7 +88,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 		QByteArray userNameByteArray;
 		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[0]);
 		userNameByteArray = user->userName().toLocal8Bit();
-		memcpy(data, msgByteArray.data(), msgByteArray.length() + 1);
+		memcpy(data, userNameByteArray.data(), userNameByteArray.length() + 1);
 		// copy message
 		memcpy(&data[MAX_USERNAME_SIZE], msgByteArray.data(), msgByteArray.length() + 1);
 		break;
@@ -203,7 +203,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		case DATA_TYPE_TEXT: {
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
-			QString msg = QString(data+20);	// 提取输入框信息
+			QString msg = QString::fromLocal8Bit(data+20);	// 提取输入框信息
 
 			Message* message = new Message(ui.msgListWidget->parentWidget());
 			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);

@@ -33,6 +33,7 @@ private:
 	QString m_msg;
 	QString m_time;
 	QString m_curTime;
+	QString m_nickName;
 
 	QSize m_allSize;
 	User_Type m_userType = User_System;

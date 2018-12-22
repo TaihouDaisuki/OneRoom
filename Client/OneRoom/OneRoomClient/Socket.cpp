@@ -16,10 +16,11 @@ int Socket::Send(PackageHead head, const char * data)
 	
 	if (data)
 		memcpy(buf + sizeof(PackageHead), data, head.dataLen);*/
-	
+	int len = head.dataLen;
+	head.dataLen = htonl(head.dataLen);
 	tcpSocket->write((char*)&head, sizeof(PackageHead));
 	if (data!=NULL)
-		tcpSocket->write(data, head.dataLen);
+		tcpSocket->write(data, len);
 	
 	return 0;
 }
