@@ -203,7 +203,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		case DATA_TYPE_TEXT: {
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
-			QString msg = QString::fromLocal8Bit(data+20);	// 提取输入框信息
+			QString msg = QString::fromLocal8Bit(data+20);	
 
 			Message* message = new Message(ui.msgListWidget->parentWidget());
 			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
@@ -211,7 +211,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		}
 		case DATA_TYPE_PICTURE: {
+			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
+			handleMessageTime(time);
+			QString msg = QString::fromLocal8Bit(data + 20);
 
+			Message* message = new Message(ui.msgListWidget->parentWidget());
+			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+			handleMessage(message, item, msg, time, Message::User_He);
 			break;
 		}
 		case DATA_TYPE_FILE: {
@@ -270,7 +276,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			userList.clear();
 			UserInfo user;
 			for (int i = 0; i < num; i++) {
-				user.setInfo(QString(data + (i * userDataLen) + MAX_USERNAME_SIZE), QString(data + (i * userDataLen)));
+				user.setInfo(QString::fromLocal8Bit(data + (i * userDataLen) + MAX_USERNAME_SIZE), QString::fromLocal8Bit(data + (i * userDataLen)));
 				userList.append(user);
 			}
 			updateUserList();

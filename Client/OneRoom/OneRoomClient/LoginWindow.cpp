@@ -105,6 +105,7 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 			}
 			case SERVER_ACK_CHANGE_PASSWORD: {
 				emit change_password_result(OK);	// 不代表登陆成功，需重新登陆
+				changePwWin->hide();
 				ui.lineEdit_2->clear();	// 清空密码
 				break;
 			}

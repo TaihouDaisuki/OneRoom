@@ -38,7 +38,7 @@ void Message::setTextSuccess()
 	m_isSending = true;
 }
 
-void Message::setText(QString text, QString time, QSize allSize, Message::User_Type userType)
+void Message::setText(QString text, QString time, QSize allSize, Message::User_Type userType, Message::Msg_Type msgType, QString imgPath)
 {
 	m_msg = text;
 	m_userType = userType;

@@ -49,6 +49,7 @@ private:
 	Socket socket;
 	UserInfo currentUser;	// 自己的用户信息
 	QList<UserInfo> userList;	// 在线用户列表
+	//QList<QList<Message*>*> messageList;	// 每个在线用户有一个消息列表
 	QQueue<Message *> sendMsgQueue;	// 发送消息队列，用于服务端确认处理
 	LoginWindow *loginWindow;
 	SettingBoard *settingBoard;
