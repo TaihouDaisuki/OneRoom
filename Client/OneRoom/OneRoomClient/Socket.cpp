@@ -107,7 +107,7 @@ void Socket::socket_error(QAbstractSocket::SocketError socketError)
 
 int Socket::loadSslFiles()
 {
-	//bool openOk = false;
+	bool openOk = false;
 	//QFile certFile(QDir::currentPath() + QString(":/ssl/server.crt"));
 	//openOk = certFile.open(QIODevice::ReadOnly);
 	//s_certificate = QSslCertificate(certFile.readAll(), QSsl::Der);
@@ -128,6 +128,6 @@ int Socket::loadSslFiles()
 	//caCerts << peerCert;
 	//s_caCertificates = caCerts;
 
-	//return openOk;
+	return openOk;
 
 }
