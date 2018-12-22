@@ -35,6 +35,7 @@ public:
 	inline QString time() { return m_time; }
 	inline User_Type userType() { return m_userType; }
 	inline Msg_Type msgType() { return m_msgType; }
+	inline QString name() { return m_nickName; }
 protected:
 	void paintEvent(QPaintEvent *event);
 private:

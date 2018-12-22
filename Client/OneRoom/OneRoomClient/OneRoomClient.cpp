@@ -17,6 +17,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	ui.msgTextEdit->installEventFilter(this);
 	setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
 
+
 	// 初始化子窗口
 	loginWindow = new LoginWindow(this);
 	loginWindow->tcpclient = &this->socket;
@@ -33,12 +34,13 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	connect(this->settingBoard, &SettingBoard::historyList_num, this, &OneRoomClient::send_history_num_setting);
 
 	setWindowOpacity(0.9);
+
 }
 
 
 void OneRoomClient::on_userListWidget_itemDoubleClicked(QListWidgetItem *item)
 {
-
+	
 }
 /* 事件处理函数 */
 void OneRoomClient::on_sendMsgBtn_clicked()
