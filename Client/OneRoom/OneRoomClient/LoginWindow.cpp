@@ -51,7 +51,7 @@ void LoginWindow::on_pushButton_clicked()
 	memcpy(ch+20, password.toLocal8Bit(), password.toLocal8Bit().length());
 
 	this->tcpclient->Send(temp, ch);
-	ui.pushButton->setEnabled(false);
+	ui.pushButton->setDisabled(true);
 	return;
 }
 
@@ -73,11 +73,11 @@ void LoginWindow::handle_new_password(QString new_password)
 
 void LoginWindow::ReceivePack(PackageHead head, char *info)
 {
-	if (head.isData == 0)
+	if (head.isData == 0) 
 	{
 		switch (head.type) {
 			case SERVER_RETUEN_ERROR_D: {
-				tcpclient->disconnect();
+				tcpclient->DisConnect();
 				if (info[0] == NO_SUCH_USER) {
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("不存在的用户名"));
 					ui.lineEdit->clear();
@@ -124,6 +124,7 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 	{
 
 	}
+	ui.pushButton->setEnabled(true);
 	return;
 }
 

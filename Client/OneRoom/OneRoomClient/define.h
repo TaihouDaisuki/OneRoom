@@ -11,8 +11,8 @@
 
 // 消息类型
 #define DATA_TYPE_SINGLE 0x00
-#define DATA_TYPE_GROUP 0x01
-#define DATA_TYPE_ALL 0x02
+#define DATA_TYPE_GROUP 0x02
+#define DATA_TYPE_ALL 0x01
 #define DATA_TYPE_TEXT 0x00
 #define DATA_TYPE_PICTURE 0x10
 #define DATA_TYPE_FILE 0x20
@@ -51,15 +51,15 @@ struct PackageHead {
 };
 
 const PackageHead SingleHead = {
-	1,0x00,0,0,0
+	1,DATA_TYPE_SINGLE,0,0,0
 };
 
 const PackageHead AllHead = {
-	1,0x01,0,0,0
+	1,DATA_TYPE_ALL,0,0,0
 };
 
 const PackageHead GroupHead = {
-	1,0x02,0,0,0
+	1,DATA_TYPE_GROUP,0,0,0
 };
 
 const PackageHead SendTest = {
