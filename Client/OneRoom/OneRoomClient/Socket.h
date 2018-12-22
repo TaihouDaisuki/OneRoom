@@ -23,7 +23,6 @@ public:
 	QTcpSocket *tcpSocket;
 	QSslSocket *sslSocket;
 	int Send(PackageHead head, const char * data);	// 
-	int GetMessage(PackageHead *head, char *data);
 	int Connect();
 	int DisConnect();
 private:

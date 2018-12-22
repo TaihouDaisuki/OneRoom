@@ -32,7 +32,7 @@ private slots:
 	void on_sendFileBtn_clicked();
 	void on_sendImgBtn_clicked();
 	void on_logOutBtn_clicked();
-	void on_package_arrived(PackageHead head, char* data);
+	void on_package_arrived(PackageHead head, char* const data);
 	void on_settingBtn_clicked();
 	void reshow_mainwindow(QString userName, QString password, int histroyListNum);
 	void handle_socket_error(QString errorMsg);

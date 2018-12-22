@@ -23,7 +23,6 @@ LoginWindow::LoginWindow(QWidget *parent)
 	
 	// connect
 	connect(changePwWin, &ChangePasswordWindow::new_password, this, &LoginWindow::handle_new_password);
-	connect(tcpclient, &Socket::sock_error_occurred, this, &LoginWindow::handle_socket_error);
 }
 
 void LoginWindow::on_pushButton_clicked()
@@ -112,10 +111,9 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 			case SERVER_RETURN_SETTING: {
 				this->hide();
 				if(info)
-					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), ntohl(*(int*)info));// 参数需发送设置信息
+					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), ntohl(*(int*)info));	// 参数需发送设置信息
 				else
-					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), 10);// 参数需发送设置信息
-				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("登陆成功！"));
+					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), 10);	// 参数需发送设置信息
 				break;
 			}
 			default:

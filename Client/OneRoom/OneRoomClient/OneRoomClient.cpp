@@ -15,12 +15,6 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	ui.msgTextEdit->setFontPointSize(12);
 	ui.msgTextEdit->installEventFilter(this);
 	setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
-	// test
-	userList.append(UserInfo("Megumi", "Kagaya", QString::number(QDateTime::currentDateTime().toTime_t())));
-	userList.append(UserInfo(QString::fromLocal8Bit("测试"), "test", QString::number(QDateTime::currentDateTime().toTime_t())));
-	userList.append(UserInfo("1234567890", "number", QString::number(QDateTime::currentDateTime().toTime_t())));
-
-	updateUserList();
 
 	// 初始化子窗口
 	loginWindow = new LoginWindow(this);
@@ -29,8 +23,9 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	settingBoard = new SettingBoard(this);
 	
 	// connect
+	connect(this->loginWindow->tcpclient, &Socket::sock_error_occurred, this->loginWindow, &LoginWindow::handle_socket_error);
 	connect(this->loginWindow, &LoginWindow::sendsignal, this, &OneRoomClient::reshow_mainwindow);
-//	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
+	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
 	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 
 	connect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
@@ -168,7 +163,7 @@ void OneRoomClient::on_settingBtn_clicked()
 	settingBoard->show();
 }
 
-void OneRoomClient::on_package_arrived(PackageHead head, char* data)
+void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 {
 	// 数据
 	if (head.isData == 1)
@@ -194,7 +189,6 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 		}
 			default:
 				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
-				return;
 		}
 	}
 	// 控制
@@ -240,22 +234,23 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* data)
 			break;
 		case SERVER_RETURN_USERLIST: {
 			// 更新用户列表
-			int num = head.dataLen / MAX_USERNAME_SIZE;
+			int userDataLen = 2 * MAX_USERNAME_SIZE;
+			int num = head.dataLen / userDataLen;
 			userList.clear();
-			UserInfo userInfo;
+			UserInfo user;
 			for (int i = 0; i < num; i++) {
-				//user.setInfo();
-				userList.append(userInfo);
+				user.setInfo(QString(data + (i * userDataLen) + MAX_USERNAME_SIZE), QString(data + (i * userDataLen)));
+				userList.append(user);
 			}
 			updateUserList();
 			break;
 		}
 		default:
 			QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
-			return;
 		}
 	}
 
+	delete data;
 }
 
 void OneRoomClient::on_logOutBtn_clicked() 
@@ -427,18 +422,20 @@ void OneRoomClient::reshow_mainwindow(QString userName, QString password, int hi
 {
 	// 初始值设置
 	currentUser.setInfo("", userName, QString::number(QDateTime::currentDateTime().toTime_t()), password);
-	
+
 	this->show();
+	this->setFocus();
 	disconnect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 	disconnect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
 	disconnect(this->loginWindow, &LoginWindow::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
 	disconnect(this->loginWindow->tcpclient, &Socket::sock_error_occurred, this->loginWindow, &LoginWindow::handle_socket_error);
 
-
 	connect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
 	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this, &OneRoomClient::send_password_setting);
 	connect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
 	connect(&this->socket, &Socket::sock_error_occurred, this, &OneRoomClient::handle_socket_error);
+	
+	QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("登陆成功！"));
 }
 
 void OneRoomClient::setButtonDisable()
@@ -475,5 +472,4 @@ void OneRoomClient::logout()
 	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
 	connect(this->loginWindow, &LoginWindow::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
 	connect(this->loginWindow->tcpclient, &Socket::sock_error_occurred, this->loginWindow, &LoginWindow::handle_socket_error);
-
 }
