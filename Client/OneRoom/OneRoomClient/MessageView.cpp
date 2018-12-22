@@ -198,7 +198,7 @@ void Message::paintEvent(QPaintEvent *event)
 		}
 		else if (m_msgType == Msg_Img) {	// Í¼Æ¬
 			QPixmap img(m_imgPath);
-			img.scaledToWidth()
+//			img.scaledToWidth()
 			painter.drawPixmap(m_textLeftRect, img);
 		}
 		else { // ÎÄ¼þ

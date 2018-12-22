@@ -27,20 +27,26 @@ public:
 
 	void setTextSuccess();
 	void setText(QString text, QString time, QSize allSize, User_Type userType, Msg_Type msgType = Msg_Text, QString imgPath = QString::null);
-	void setUserName(QString from, QString to) 
+	void setUserName(QString from)
 	{
 		m_fromUserName = from;
-		m_toUserName = to;
 	}
+
+	QString fromUserName()
+	{
+		return m_fromUserName;
+	}
+
 
 	QSize getRealString(QString src);
 	QSize fontRect(QString str);
+	QList<QString> m_toUserNameList;
 
 	inline QString text() { return m_msg; }
 	inline QString time() { return m_time; }
 	inline User_Type userType() { return m_userType; }
 	inline Msg_Type msgType() { return m_msgType; }
-	inline QString name() { return m_nickName; }
+
 protected:
 	void paintEvent(QPaintEvent *event);
 private:
@@ -48,7 +54,7 @@ private:
 	QString m_time;
 	QString m_curTime;
 	QString m_fromUserName;
-	QString m_toUserName;
+
 
 	QString m_imgPath;
 
