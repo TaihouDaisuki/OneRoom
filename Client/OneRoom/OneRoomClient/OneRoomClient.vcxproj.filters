@@ -60,6 +60,9 @@
     <ClCompile Include="ChangePasswordWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="HistoryWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="OneRoomClient.h">
@@ -83,6 +86,9 @@
     <QtMoc Include="ChangePasswordWindow.h">
       <Filter>Header Files</Filter>
     </QtMoc>
+    <QtMoc Include="HistoryWindow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="OneRoomClient.ui">
@@ -95,6 +101,9 @@
       <Filter>Form Files</Filter>
     </QtUic>
     <QtUic Include="ChangePasswordWindow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="HistoryWindow.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>

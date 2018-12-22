@@ -43,7 +43,10 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 
 	if (msg == "")	// 空消息直接返回
+	{
+		setButtonEnable();
 		return;
+	}
 
 	// 判断数目
 	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
@@ -51,6 +54,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	if (nCount < 1) {
 		// 无选择用户，提示需选择发送对象
 		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
+		setButtonEnable();
 		return;
 	}
 
@@ -65,34 +69,61 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 	// 构成数据包
 	QByteArray msgByteArray = msg.toLocal8Bit();	// 转为编码格式
-	int dataSize = ((nCount + 1) * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
 	// 添加头部
 	PackageHead head;
+	char* data = NULL;
+	int dataSize = 0;
+
 	switch (sendType) {
-	case DATA_TYPE_SINGLE:
+	case DATA_TYPE_SINGLE: {
 		memcpy(&head, &SingleHead, sizeof(PackageHead));
+		dataSize = MAX_USERNAME_SIZE + msgByteArray.length() + 1;	// 数据部分含尾零
+		data = new(std::nothrow) char[dataSize];
+		if (data == NULL) {
+			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+			return;
+		}
+		// 单发目的用户名
+		UserInfo *user;
+		QByteArray userNameByteArray;
+		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[0]);
+		userNameByteArray = user->userName().toLocal8Bit();
+		memcpy(data, msgByteArray.data(), msgByteArray.length() + 1);
+		// copy message
+		memcpy(&data[MAX_USERNAME_SIZE], msgByteArray.data(), msgByteArray.length() + 1);
 		break;
-	case DATA_TYPE_GROUP:
+	}
+	case DATA_TYPE_GROUP: {
 		memcpy(&head, &GroupHead, sizeof(PackageHead));
+		// 添加数据
+		dataSize = (nCount * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
+		data = new(std::nothrow) char[dataSize];
+		if (data == NULL) {
+			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+			return;
+		}
+		int length = addTargetUserData(itemList, data, nCount);
+		// copy message
+		memcpy(&data[length], msgByteArray.data(), msgByteArray.length() + 1);
 		break;
-	case DATA_TYPE_ALL:
+	}
+	case DATA_TYPE_ALL: {
 		memcpy(&head, &AllHead, sizeof(PackageHead));
+		dataSize = MAX_USERNAME_SIZE + msgByteArray.length() + 1;	// 数据部分含尾零
+		data = new(std::nothrow) char[dataSize];
+		if (data == NULL) {
+			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+			return;
+		}
+		// copy message
+		memcpy(&data[MAX_USERNAME_SIZE], msgByteArray.data(), msgByteArray.length() + 1);
 		break;
+	}
 	default:
 		QMessageBox::warning(this, tr("FBI Warning"), tr("add message head error"));
 		return;
 	}
 	head.dataLen = dataSize;
-
-	// 添加数据
-	char* data = new(std::nothrow) char[dataSize];
-	if (data == NULL) {
-		QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
-		return;
-	}
-	int length = addTargetUserData(itemList, data, nCount);
-	// copy message
-	memcpy(&data[length], msgByteArray.data(), msgByteArray.length() + 1);
 
 	// 发送package
 	handleMessageTime(time);
@@ -212,7 +243,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		case SERVER_RETURN_ERROR_C:
 			if (data[0] == SEND_MESSAGE_FAIL) {
 				// 发送消息失败
-				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败，指定用户不存在"));
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("消息发送失败"));
 			}
 			else if (data[0] == PASSWORD_ERROR) {
 				// 改密码失败，原密码错误
@@ -257,6 +288,11 @@ void OneRoomClient::on_logOutBtn_clicked()
 {
 	socket.DisConnect();
 	logout();
+}
+
+void OneRoomClient::on_msgHistoryBtn_clicked()
+{
+
 }
 
 void OneRoomClient::handle_socket_error(QString errorMsg)
@@ -319,11 +355,6 @@ int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* c
 		memcpy(&data[i * MAX_USERNAME_SIZE + 1], userNameByteArray.data(), MAX_USERNAME_SIZE);
 		length += MAX_USERNAME_SIZE;
 	}
-
-	// 添加当前用户名
-	userNameByteArray = currentUser.userName().toLocal8Bit();
-	memcpy(&data[nCount * MAX_USERNAME_SIZE + 1], userNameByteArray.data(), MAX_USERNAME_SIZE);
-	length += MAX_USERNAME_SIZE;
 
 	return length;
 }

@@ -114,6 +114,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ChangePasswordWindow.cpp" />
+    <ClCompile Include="HistoryWindow.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MessageView.cpp" />
     <ClCompile Include="LoginWindow.cpp" />
@@ -136,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="ChangePasswordWindow.ui" />
+    <QtUic Include="HistoryWindow.ui" />
     <QtUic Include="LoginWindow.ui" />
     <QtUic Include="OneRoomClient.ui" />
     <QtUic Include="SettingBoard.ui" />
@@ -163,6 +165,12 @@
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="HistoryWindow.h">
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName)\.;$(QTDIR)\include\QtNetwork;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtXml;$(QTDIR)\include\QtXmlPatterns;$(QTDIR)\include\QtWinExtras</IncludePath>
+      <Define Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">UNICODE;_UNICODE;WIN32;WIN64;QT_NETWORK_LIB;QT_WIDGETS_LIB;QT_CORE_LIB;QT_GUI_LIB;QT_XML_LIB;QT_XMLPATTERNS_LIB;QT_WINEXTRAS_LIB</Define>
+      <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName)\.;$(QTDIR)\include\QtNetwork;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtXml;$(QTDIR)\include\QtXmlPatterns;$(QTDIR)\include\QtWinExtras</IncludePath>
+      <Define Condition="'$(Configuration)|$(Platform)'=='Release|x64'">UNICODE;_UNICODE;WIN32;WIN64;QT_NO_DEBUG;NDEBUG;QT_NETWORK_LIB;QT_WIDGETS_LIB;QT_CORE_LIB;QT_GUI_LIB;QT_XML_LIB;QT_XMLPATTERNS_LIB;QT_WINEXTRAS_LIB</Define>
+    </QtMoc>
     <QtMoc Include="ChangePasswordWindow.h">
       <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName)\.;$(QTDIR)\include\QtNetwork;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtXml;$(QTDIR)\include\QtXmlPatterns;$(QTDIR)\include\QtWinExtras</IncludePath>
       <Define Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">UNICODE;_UNICODE;WIN32;WIN64;QT_NETWORK_LIB;QT_WIDGETS_LIB;QT_CORE_LIB;QT_GUI_LIB;QT_XML_LIB;QT_XMLPATTERNS_LIB;QT_WINEXTRAS_LIB</Define>
