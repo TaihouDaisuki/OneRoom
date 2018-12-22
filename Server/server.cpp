@@ -1,4 +1,6 @@
 #include "server.h"
+#include "tinystr.h"
+#include "tinyxml.h"
 
 using namespace std;
 
