@@ -47,9 +47,10 @@ int Socket::Connect()
 	{
 		QMessageBox::warning(this, "SSL File Error", "Load SSL Files failed.");
 	}
-	connect(sslSocket, SIGNAL(QAbstractSocket::readyRead()), this, SLOT(dataReceived()));
-	connect(sslSocket, SIGNAL(QAbstractSocket::disconnected()), this, SLOT(socket_disconnected()));
-	connect(sslSocket, SIGNAL(QAbstractSocket::error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
+	connect(sslSocket, SIGNAL(readyRead()), this, SLOT(dataReceived()));
+	connect(sslSocket, SIGNAL(disconnected()), this, SLOT(socket_disconnected()));
+	connect(sslSocket, SIGNAL(error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
+
 #endif
 	return 0;
 }
