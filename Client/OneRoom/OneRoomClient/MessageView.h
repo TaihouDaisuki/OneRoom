@@ -22,7 +22,7 @@ public:
 	enum Msg_Type {
 		Msg_Text,	// 文本消息
 		Msg_Img,	// 图片消息
-		Msg_File	// 文字消息
+		Msg_File	// 文件消息
 	};
 
 	void setTextSuccess();
@@ -34,12 +34,17 @@ public:
 	}
 
 	QSize getRealString(QString src);
+	QSize getRealImage();
 	QSize fontRect(QString str);
 
 	inline QString text() { return m_msg; }
 	inline QString time() { return m_time; }
 	inline User_Type userType() { return m_userType; }
 	inline Msg_Type msgType() { return m_msgType; }
+	inline QString imgPath() { return m_imgPath; }
+	inline void setMsgType(Msg_Type msgType) { m_msgType = msgType; }
+	inline void setImgPath(QString imgPath) { m_imgPath = imgPath; }
+
 protected:
 	void paintEvent(QPaintEvent *event);
 private:

@@ -45,6 +45,9 @@ void Message::setText(QString text, QString time, QSize allSize, Message::User_T
 	m_time = time;
 	m_curTime = QDateTime::fromTime_t(time.toInt()).toString("hh:mm");
 	m_allSize = allSize;
+	m_msgType = msgType;
+	m_imgPath = imgPath;
+	
 	if (userType == User_Me) {
 		if (!m_isSending) { // 加载动画
 			m_loading->move(m_kuangRightRect.x() - m_loading->width() - 10, m_kuangRightRect.y() + m_kuangRightRect.height() / 2 - m_loading->height() / 2);
@@ -75,8 +78,15 @@ QSize Message::fontRect(QString str)
 	m_spaceWid = this->width() - m_textWidth;
 	m_iconLeftRect = QRect(iconSpaceW, iconTMPH, iconWH, iconWH);
 	m_iconRightRect = QRect(this->width() - iconSpaceW - iconWH, iconTMPH, iconWH, iconWH);
-
-	QSize size = getRealString(m_msg); // 整个item的size
+	
+	QSize size;
+	if(m_msgType == Msg_Text)
+		size = getRealString(m_msg); // 整个item的size
+	else if (m_msgType == Msg_Img) {
+		size = getRealImage(); // 整个item的size
+	}
+	else
+		size = getRealString(m_msg); 
 
 	qDebug() << "fontRect Size:" << size;
 	int hei = size.height() < minHei ? minHei : size.height();
@@ -145,6 +155,19 @@ QSize Message::getRealString(QString src)
 	return QSize(nMaxWidth + m_spaceWid, (nCount + 1) * m_lineHeight + 2 * m_lineHeight);
 }
 
+QSize Message::getRealImage()
+{
+	QFontMetricsF fm(this->font());
+	m_lineHeight = fm.lineSpacing();
+	int imgWidth = 300;
+
+	QPixmap pixmap(m_imgPath);
+
+	pixmap = pixmap.scaledToWidth(imgWidth);
+
+	return QSize(imgWidth + m_spaceWid, pixmap.height() + 2 * m_lineHeight);	//图片定宽300
+}
+
 void Message::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event);
@@ -198,11 +221,17 @@ void Message::paintEvent(QPaintEvent *event)
 		}
 		else if (m_msgType == Msg_Img) {	// 图片
 			QPixmap img(m_imgPath);
-			img.scaledToWidth()
+			img = img.scaledToWidth(m_textLeftRect.width());
 			painter.drawPixmap(m_textLeftRect, img);
 		}
 		else { // 文件
-
+			QPen penText;
+			penText.setColor(QColor(51, 51, 51));
+			painter.setPen(penText);
+			QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
+			option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+			painter.setFont(this->font());
+			painter.drawText(m_textLeftRect, m_msg, option);
 		}
 	}
 	else if (m_userType == User_Type::User_Me) { // 自己
@@ -227,13 +256,29 @@ void Message::paintEvent(QPaintEvent *event)
 		painter.drawPolygon(points, 3);
 
 		//内容
-		QPen penText;
-		penText.setColor(Qt::white);
-		painter.setPen(penText);
-		QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
-		option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-		painter.setFont(this->font());
-		painter.drawText(m_textRightRect, m_msg, option);
+		if (m_msgType == Msg_Text) {	// 文本
+			QPen penText;
+			penText.setColor(Qt::white);
+			painter.setPen(penText);
+			QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
+			option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+			painter.setFont(this->font());
+			painter.drawText(m_textRightRect, m_msg, option);
+		}
+		else if (m_msgType == Msg_Img) {	// 图片
+			QPixmap img(m_imgPath);
+			img = img.scaledToWidth(m_textLeftRect.width());
+			painter.drawPixmap(m_textRightRect, img);
+		}
+		else { // 文件
+			QPen penText;
+			penText.setColor(QColor(51, 51, 51));
+			painter.setPen(penText);
+			QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
+			option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+			painter.setFont(this->font());
+			painter.drawText(m_textRightRect, m_msg, option);
+		}
 	}
 	else if (m_userType == User_Type::User_Time) { // 时间
 		QPen penText;

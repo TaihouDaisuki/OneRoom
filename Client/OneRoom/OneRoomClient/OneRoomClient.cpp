@@ -168,6 +168,9 @@ void OneRoomClient::on_sendFileBtn_clicked()
 		fileNames = fileDialog->selectedFiles();
 	}
 	// send
+	QString msg = QString::fromLocal8Bit("[文件]");
+
+
 	setButtonEnable();
 }
 
@@ -191,6 +194,102 @@ void OneRoomClient::on_sendImgBtn_clicked()
 		fileNames = fileDialog->selectedFiles();
 	}
 	// send
+	QString msg = QString::fromLocal8Bit("[图片]");
+	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
+
+	// 判断数目
+	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
+	int nCount = itemList.count();
+	if (nCount < 1) {
+		// 无选择用户，提示需选择发送对象
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
+		setButtonEnable();
+		return;
+	}
+
+	// 判断消息发送方式
+	unsigned char sendType = 0;
+	if (nCount == ui.userListWidget->count())
+		sendType = DATA_TYPE_ALL;
+	else if (nCount == 1)
+		sendType = DATA_TYPE_SINGLE;
+	else
+		sendType = DATA_TYPE_GROUP;
+
+	// 构成数据包
+	QByteArray msgByteArray = msg.toLocal8Bit();	// 转为编码格式
+	// 添加头部
+	PackageHead head;
+	char* data = NULL;
+	int dataSize = 0;
+
+	switch (sendType) {
+	case DATA_TYPE_SINGLE: {
+		memcpy(&head, &SingleHead, sizeof(PackageHead));
+		dataSize = MAX_USERNAME_SIZE + msgByteArray.length() + 1;	// 数据部分含尾零
+		data = new(std::nothrow) char[dataSize];
+		if (data == NULL) {
+			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+			return;
+		}
+		// 单发目的用户名
+		UserInfo *user;
+		QByteArray userNameByteArray;
+		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[0]);
+		userNameByteArray = user->userName().toLocal8Bit();
+		memcpy(data, userNameByteArray.data(), userNameByteArray.length() + 1);
+		
+		// copy data
+		memcpy(&data[MAX_USERNAME_SIZE], msgByteArray.data(), msgByteArray.length() + 1);
+		break;
+	}
+	case DATA_TYPE_GROUP: {
+		memcpy(&head, &GroupHead, sizeof(PackageHead));
+		// 添加数据
+		dataSize = 1 + (nCount * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
+		data = new(std::nothrow) char[dataSize];
+		if (data == NULL) {
+			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+			return;
+		}
+		int length = addTargetUserData(itemList, data, nCount);
+		
+		// copy data
+		memcpy(&data[length], msgByteArray.data(), msgByteArray.length() + 1);
+		break;
+	}
+	case DATA_TYPE_ALL: {
+		memcpy(&head, &AllHead, sizeof(PackageHead));
+		dataSize = MAX_USERNAME_SIZE + msgByteArray.length() + 1;	// 数据部分含尾零
+		data = new(std::nothrow) char[dataSize];
+		if (data == NULL) {
+			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+			return;
+		}
+		// copy data
+		memcpy(&data[MAX_USERNAME_SIZE], msgByteArray.data(), msgByteArray.length() + 1);
+		break;
+	}
+	default:
+		QMessageBox::warning(this, tr("FBI Warning"), tr("add message head error"));
+		return;
+	}
+	head.dataLen = dataSize;
+
+	// 发送package
+	handleMessageTime(time);
+
+	Message* message = new Message(ui.msgListWidget->parentWidget());
+	QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+	handleMessage(message, item, msg, time, Message::User_Me, Message::Msg_Img, fileNames[0]);
+	// 调用send函数
+	//socket.Send(head, data);
+	delete data;
+	sendMsgQueue.push_back(message);
+
+	//清空临时条目列表
+	itemList.clear();
+	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
 
 	setButtonEnable();
 }
@@ -397,12 +496,16 @@ void OneRoomClient::handleUserinfo(UserInfo *userInfo, QListWidgetItem *item, QS
 
 /* Message View */
 // 设置消息图形属性并加入list
-void OneRoomClient::handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type)
+void OneRoomClient::handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type, Message::Msg_Type msgType, QString imgPath)
 {
 	message->setFixedWidth(ui.msgListWidget->width() - 10);
-	QSize size = message->fontRect(text);	// 获取文本框大小
+	if (msgType == Message::Msg_Img) {
+		message->setMsgType(msgType);
+		message->setImgPath(imgPath);
+	}
+	QSize size = message->fontRect(text);	// 获取气泡大小
 	item->setSizeHint(size);	// 设置尺寸
-	message->setText(text, time, size, type);
+	message->setText(text, time, size, type, msgType, imgPath);
 	ui.msgListWidget->setItemWidget(item, message);
 }
 
@@ -442,7 +545,7 @@ void OneRoomClient::resizeEvent(QResizeEvent *event)
 	for (int i = 0; i < ui.msgListWidget->count(); i++) {
 		Message *message = (Message*)ui.msgListWidget->itemWidget(ui.msgListWidget->item(i));
 		QListWidgetItem *item = ui.msgListWidget->item(i);
-		handleMessage(message, item, message->text(), message->time(), message->userType());
+		handleMessage(message, item, message->text(), message->time(), message->userType(), message->msgType(), message->imgPath());
 	}
 }
 

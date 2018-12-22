@@ -23,7 +23,7 @@ public:
 	void updateUserList();
 	void handleUserinfo(UserInfo *userInfo, QListWidgetItem *item, QString nickName, QString userName, QString loginTime);
 
-	void handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type);
+	void handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type, Message::Msg_Type msgType = Message::Msg_Text, QString imgPath = QString::null);
 	void handleMessageTime(QString curMsgTime);
 	int addTargetUserData(QList<QListWidgetItem *> &itemList, char* const data, int nCount);
 
