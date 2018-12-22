@@ -187,13 +187,22 @@ void Message::paintEvent(QPaintEvent *event)
 		painter.drawLine(QPointF(m_sanjiaoLeftRect.x() - 1, 30), QPointF(m_sanjiaoLeftRect.x() + m_sanjiaoLeftRect.width(), 36));
 
 		//内容
-		QPen penText;
-		penText.setColor(QColor(51, 51, 51));
-		painter.setPen(penText);
-		QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
-		option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-		painter.setFont(this->font());
-		painter.drawText(m_textLeftRect, m_msg, option);
+		if (m_msgType == Msg_Text) {
+			QPen penText;
+			penText.setColor(QColor(51, 51, 51));
+			painter.setPen(penText);
+			QTextOption option(Qt::AlignLeft | Qt::AlignVCenter);
+			option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+			painter.setFont(this->font());
+			painter.drawText(m_textLeftRect, m_msg, option);
+		}
+		else if (m_msgType == Msg_Img) {
+			QPen penImg;
+
+		}
+		else { // 文件
+
+		}
 	}
 	else if (m_userType == User_Type::User_Me) { // 自己
    //头像

@@ -10,6 +10,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 {
 	ui.setupUi(this);
 	ui.userListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);	// 设置多选
+	ui.msgListWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	QTextCodec::setCodecForLocale(QTextCodec::codecForName("GBK"));	// 设置本地编码
 	ui.msgTextEdit->setFontFamily("MicrosoftYaHei");
 	ui.msgTextEdit->setFontPointSize(12);
@@ -96,7 +97,7 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	case DATA_TYPE_GROUP: {
 		memcpy(&head, &GroupHead, sizeof(PackageHead));
 		// 添加数据
-		dataSize = (nCount * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
+		dataSize = 1 + (nCount * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
 		data = new(std::nothrow) char[dataSize];
 		if (data == NULL) {
 			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
@@ -350,7 +351,7 @@ int OneRoomClient::addTargetUserData(QList<QListWidgetItem *> &itemList, char* c
 	//char* data = new char[(nCount + 1) * USERNAME_BUFF_SIZE];
 	UserInfo *user;
 	QByteArray userNameByteArray;
-	int length = 0;
+	int length = 1;
 	
 	// 首字节为发送人数
 	data[0] = (char)nCount;
