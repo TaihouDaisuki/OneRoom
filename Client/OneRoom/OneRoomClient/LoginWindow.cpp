@@ -109,7 +109,10 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 			}
 			case SERVER_RETURN_SETTING: {
 				this->hide();
-				emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), ntohl(*(int*)info));	// 参数需发送设置信息
+				if(info)
+					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), ntohl(*(int*)info));// 参数需发送设置信息
+				else
+					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), 10);// 参数需发送设置信息
 				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("登陆成功！"));
 				break;
 			}
