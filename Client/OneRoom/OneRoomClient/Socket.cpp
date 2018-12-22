@@ -24,11 +24,6 @@ int Socket::Send(PackageHead head, const char * data)
 	return 0;
 }
 
-int Socket::GetMessage(PackageHead *head, char *data)
-{
-	return 0;
-}
-
 int Socket::Connect()
 {
 #ifndef SSL
@@ -36,9 +31,9 @@ int Socket::Connect()
 		tcpSocket = new QTcpSocket(this);
 	//std::cout << "connect to " << this->ip << ":" << this->port << std::endl;
 	tcpSocket->connectToHost(ip.c_str(), port);
-	connect(tcpSocket, SIGNAL(QAbstractSocket::readyRead()), this, SLOT(dataReceived()));
-	connect(tcpSocket, SIGNAL(QAbstractSocket::disconnected()), this, SLOT(socket_disconnected()));
-	connect(tcpSocket, SIGNAL(QAbstractSocket::error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
+	connect(tcpSocket, SIGNAL(readyRead()), this, SLOT(dataReceived()));
+	connect(tcpSocket, SIGNAL(disconnected()), this, SLOT(socket_disconnected()));
+	connect(tcpSocket, SIGNAL(error(QAbstractSocket::SocketError socketError)), this, SLOT(socket_error(QAbstractSocket::SocketError socketError)));
 #else
 	if (loadSslFiles())
 	{
@@ -69,21 +64,19 @@ void Socket::dataReceived()
 	while (tcpSocket->bytesAvailable() > 0)
 	{
 		//std::cout << tcpSocket->bytesAvailable() << std::endl;
-		char* head = new char[PACKAGE_HEAD_SIZE];
-		tcpSocket->read(head, 8);
-		PackageHead temp;
-		memcpy(&temp, head, 8);
-		
+		PackageHead head;
+		tcpSocket->read((char*)&head, 8);
+		head.dataLen = ntohl(head.dataLen);
 		char* temp_buf = NULL;
 
-		if (temp.dataLen == 0)
+		if (head.dataLen == 0)
 			temp_buf = NULL;
 		else {
-			temp_buf = new char[PACKAGE_DATA_MAX_SIZE];
-			tcpSocket->read(temp_buf, temp.dataLen);
+			temp_buf = new char[head.dataLen];
+			tcpSocket->read(temp_buf, head.dataLen);
 		}
 		//std::cout << "getNewmessage" << std::endl;
-		emit getNewmessage(temp, temp_buf);
+		emit getNewmessage(head, temp_buf);
 	}
 }
 

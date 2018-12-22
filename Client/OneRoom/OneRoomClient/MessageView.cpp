@@ -19,7 +19,7 @@ Message::Message(QWidget *parent) : QWidget(parent)
 	//    te_font.setLetterSpacing(QFont::AbsoluteSpacing, 0);             //ÉèÖÃ×Ö¼ä¾àÎª3ÏñËØ //ÉèÖÃ×Ö¼ä¾àÏñËØÖµ
 	this->setFont(te_font);
 	m_leftPixmap = QPixmap(":/Resources/Resources/img/Customer Copy.png");
-	m_rightPixmap = QPixmap(":/Resources/Resources/img/CustomerService.png");
+	m_rightPixmap = QPixmap(":/Resources/Resources/img/Customer Copy.png");
 
 	m_loadingMovie = new QMovie(this);
 	m_loadingMovie->setFileName(":/Resources/Resources/img/loading4.gif");
