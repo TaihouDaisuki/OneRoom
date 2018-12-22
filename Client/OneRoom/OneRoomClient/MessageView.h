@@ -27,6 +27,11 @@ public:
 
 	void setTextSuccess();
 	void setText(QString text, QString time, QSize allSize, User_Type userType, Msg_Type msgType = Msg_Text, QString imgPath = QString::null);
+	void setUserName(QString from, QString to) 
+	{
+		m_fromUserName = from;
+		m_toUserName = to;
+	}
 
 	QSize getRealString(QString src);
 	QSize fontRect(QString str);
@@ -42,7 +47,9 @@ private:
 	QString m_msg;
 	QString m_time;
 	QString m_curTime;
-	QString m_nickName;
+	QString m_fromUserName;
+	QString m_toUserName;
+
 	QString m_imgPath;
 
 	QSize m_allSize;
