@@ -187,7 +187,7 @@ void Message::paintEvent(QPaintEvent *event)
 		painter.drawLine(QPointF(m_sanjiaoLeftRect.x() - 1, 30), QPointF(m_sanjiaoLeftRect.x() + m_sanjiaoLeftRect.width(), 36));
 
 		//内容
-		if (m_msgType == Msg_Text) {
+		if (m_msgType == Msg_Text) {	// 文本
 			QPen penText;
 			penText.setColor(QColor(51, 51, 51));
 			painter.setPen(penText);
@@ -196,9 +196,10 @@ void Message::paintEvent(QPaintEvent *event)
 			painter.setFont(this->font());
 			painter.drawText(m_textLeftRect, m_msg, option);
 		}
-		else if (m_msgType == Msg_Img) {
-			QPen penImg;
-
+		else if (m_msgType == Msg_Img) {	// 图片
+			QPixmap img(m_imgPath);
+			img.scaledToWidth()
+			painter.drawPixmap(m_textLeftRect, img);
 		}
 		else { // 文件
 
