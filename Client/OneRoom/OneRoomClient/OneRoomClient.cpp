@@ -264,6 +264,11 @@ void OneRoomClient::on_logOutBtn_clicked()
 	logout();
 }
 
+void OneRoomClient::handle_socket_error(QString errorMsg)
+{
+	QMessageBox::warning(this, tr("FBI Warning"), errorMsg);
+}
+
 void OneRoomClient::send_history_num_setting(int num)
 {
 	int len = sizeof(int);
@@ -427,10 +432,13 @@ void OneRoomClient::reshow_mainwindow(QString userName, QString password, int hi
 	disconnect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 	disconnect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
 	disconnect(this->loginWindow, &LoginWindow::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+	disconnect(this->loginWindow->tcpclient, &Socket::sock_error_occurred, this->loginWindow, &LoginWindow::handle_socket_error);
+
 
 	connect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
 	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this, &OneRoomClient::send_password_setting);
 	connect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+	connect(&this->socket, &Socket::sock_error_occurred, this, &OneRoomClient::handle_socket_error);
 }
 
 void OneRoomClient::setButtonDisable()
@@ -457,11 +465,15 @@ void OneRoomClient::logout()
 {
 	this->hide();
 	loginWindow->show();
+	loginWindow->setFocus();
 	disconnect(&this->socket, &Socket::getNewmessage, this, &OneRoomClient::on_package_arrived);
 	disconnect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this, &OneRoomClient::send_password_setting);
 	disconnect(this, &OneRoomClient::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+	disconnect(&this->socket, &Socket::sock_error_occurred, this, &OneRoomClient::handle_socket_error);
 
 	connect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);
 	connect(this->settingBoard->changePasswordWindow, &ChangePasswordWindow::new_password, this->loginWindow, &LoginWindow::handle_new_password);
 	connect(this->loginWindow, &LoginWindow::change_password_result, this->settingBoard->changePasswordWindow, &ChangePasswordWindow::handle_password_result);
+	connect(this->loginWindow->tcpclient, &Socket::sock_error_occurred, this->loginWindow, &LoginWindow::handle_socket_error);
+
 }

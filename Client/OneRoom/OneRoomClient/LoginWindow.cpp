@@ -23,6 +23,7 @@ LoginWindow::LoginWindow(QWidget *parent)
 	
 	// connect
 	connect(changePwWin, &ChangePasswordWindow::new_password, this, &LoginWindow::handle_new_password);
+	connect(tcpclient, &Socket::sock_error_occurred, this, &LoginWindow::handle_socket_error);
 }
 
 void LoginWindow::on_pushButton_clicked()
@@ -94,6 +95,7 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 				if (info[0] == ENFORCE_CHANGE_PASSWORD) {
 					init_password = ui.lineEdit_2->text();	// 要求强制修改密码代表当前用户输入的就是初始密码
 					changePwWin->show();
+					changePwWin->setFocus();
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("首次登陆请修改密码"));
 				}
 				else if (info[0] == PASSWORD_ERROR)
@@ -125,4 +127,9 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 
 	}
 	return;
+}
+
+void LoginWindow::handle_socket_error(QString errorMsg)
+{
+	QMessageBox::warning(this, tr("FBI Warning"), errorMsg);
 }

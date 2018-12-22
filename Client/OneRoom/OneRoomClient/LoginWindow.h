@@ -48,6 +48,7 @@ private slots:
 public slots:
 	void ReceivePack(PackageHead value, char *info);
 	void handle_new_password(QString new_password);
+	void handle_socket_error(QString errorMsg);
 
 signals:
 	void sendsignal(QString userName, QString password, int histroyListNum);

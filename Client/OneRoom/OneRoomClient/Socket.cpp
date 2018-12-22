@@ -91,30 +91,30 @@ void Socket::dataReceived()
 
 void Socket::socket_disconnected()
 {
-	QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("连接已经断开"));
+	emit sock_error_occurred(QString::fromLocal8Bit("连接已经断开"));
 }
 
 void Socket::socket_error(QAbstractSocket::SocketError socketError)
 {
 #ifndef SSL
-	QMessageBox::warning(this, tr("FBI Warning"), tcpSocket->errorString());
+	emit sock_error_occurred(tcpSocket->errorString());
 #else
-	QMessageBox::warning(this, tr("FBI Warning"), sslSocket->errorString());
+	emit sock_error_occurred(sslSocket->errorString());
 #endif
 }
 
 int Socket::loadSslFiles()
 {
 	bool openOk = false;
-	//QFile certFile(QDir::currentPath() + QString(":/ssl/server.crt"));
-	//openOk = certFile.open(QIODevice::ReadOnly);
-	//s_certificate = QSslCertificate(certFile.readAll(), QSsl::Der);
-	//openOk &= !s_certificate.isNull();
+	QFile certFile(QDir::currentPath() + QString(":/ssl/server.crt"));
+	openOk = certFile.open(QIODevice::ReadOnly);
+	s_caCertificate = QSslCertificate(certFile.readAll(), QSsl::Der);
+	openOk &= !s_caCertificate.isNull();
 
-	//QFile keyFile(QDir::currentPath() + QString(":/ssl/ca.key"));
-	//openOk &= keyFile.open(QIODevice::ReadOnly);
-	//s_privateKey = QSslKey(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
-	//openOk &= !s_privateKey.isNull();
+	QFile keyFile(QDir::currentPath() + QString(":/ssl/ca.key"));
+	openOk &= keyFile.open(QIODevice::ReadOnly);
+	s_privateKey = QSslKey(keyFile.readAll(), QSsl::Rsa, QSsl::Pem, QSsl::PrivateKey);
+	openOk &= !s_privateKey.isNull();
 
 	//QFile peerFile(QDir::currentPath() + QString("/sslCert/cert.pem"));
 	//openOk &= peerFile.open(QIODevice::ReadOnly);
