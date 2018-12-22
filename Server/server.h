@@ -37,15 +37,16 @@
 #define MAXPASSLEN              20
 #define MAXNAMELEN              20
 #define MD5LEN                  32
-#define MAXDATALEN              2000
+#define MAXDATALEN              2048
 #define CTRLPACKLEN             8
-#define MAXBUFFERLEN            2020
+#define MAXBUFFERLEN            2060
 
 // from client
 #define LOG_IN_REQ              0x00
 #define LOG_OUT_REQ             0x03
 #define CHG_PSSW_REQ            0x07
 #define CHG_SET_REQ             0x08
+#define GET_HISTORY             0x0E
 // from server
 #define REQ_SUCC                0x01
 #define REQ_SET                 0x09
@@ -53,6 +54,7 @@
 #define REQ_ERR_DISC            0x0B
 #define REQ_USER                0x0C
 #define PASS_CHG_SUCC           0x0D
+#define REQ_HISTORY             0x0F
 // error number
 #define ACC_NOT_EXIST           0x0
 #define CHG_PASS                0x1
@@ -165,6 +167,7 @@ private:
     int transmit_request(ClientInfo *client, CtrlPack *pack);
 
     // common
+    int updatebfds(fd_set fds);
     int userlist_request_to_all();
     int log_out_unexpected(ClientInfo *client);
 
@@ -174,9 +177,12 @@ private:
     void mysql_get_username(const int uid, char* const username);
     int mysql_compare_password(const int uid, const char* const password);
     bool mysql_check_first_time(const int uid);
+    void ServerSock::mysql_insert_message(const int uid, const char* const account, const char* const message);
 
     sockaddr_in serveraddr;
+
     int listenfd;
+    fd_set sockfds, readfds;
 
     list<ClientInfo> clientlist;
     int clicnt;
