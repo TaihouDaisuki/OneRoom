@@ -53,6 +53,8 @@ private:
 	QQueue<Message *> sendMsgQueue;	// 发送消息队列，用于服务端确认处理
 	LoginWindow *loginWindow;
 	SettingBoard *settingBoard;
+	QListWidget *msgListWidgetShow;
+
 
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
 	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器

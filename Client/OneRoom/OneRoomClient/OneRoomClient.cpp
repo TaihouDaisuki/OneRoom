@@ -17,6 +17,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	ui.msgTextEdit->installEventFilter(this);
 	setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
 
+
 	// 初始化子窗口
 	loginWindow = new LoginWindow(this);
 	loginWindow->tcpclient = &this->socket;
@@ -33,11 +34,52 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	connect(this->settingBoard, &SettingBoard::historyList_num, this, &OneRoomClient::send_history_num_setting);
 
 	setWindowOpacity(0.9);
+
 }
 
 
 void OneRoomClient::on_userListWidget_itemDoubleClicked(QListWidgetItem *item)
 {
+	UserInfo *user = (UserInfo *)ui.userListWidget->itemWidget(item);
+	QString fromname = user->userName();
+	QString toname = currentUser.userName();
+
+	int count = ui.msgListWidget->count();
+	int last_time;
+	for (int i = 0; i < count; i++)
+	{
+		Message *message = (Message *)ui.msgListWidget->itemWidget(ui.msgListWidget->item(i));	// 返回当前item对应的widget
+		if (message->userType() == Message::User_Type::User_Time)
+		{
+			last_time = i;
+			ui.msgListWidget->setItemHidden(ui.msgListWidget->item(i), true);
+		}
+		if (message->userType() == Message::User_Type::User_Me)
+		{
+			int count = message->m_toUserNameList.count();
+			int flag = 0;
+			for (int j = 0; j < count; j++)
+				if (message->m_toUserNameList.at(j) == fromname)
+					flag = 1;
+			if(flag==0)
+				ui.msgListWidget->setItemHidden(ui.msgListWidget->item(i), true);
+			else
+			{
+				ui.msgListWidget->setItemHidden(ui.msgListWidget->item(last_time), false);
+				ui.msgListWidget->setItemHidden(ui.msgListWidget->item(i), false);
+			}
+		}
+		if (message->userType() == Message::User_Type::User_He)
+		{
+			if (message->fromUserName() != fromname)
+				ui.msgListWidget->setItemHidden(ui.msgListWidget->item(i), true);
+			else
+			{
+				ui.msgListWidget->setItemHidden(ui.msgListWidget->item(last_time), false);
+				ui.msgListWidget->setItemHidden(ui.msgListWidget->item(i), false);
+			}
+		}
+	}
 
 }
 /* 事件处理函数 */
@@ -133,8 +175,39 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 	// 发送package
 	handleMessageTime(time);
-
 	Message* message = new Message(ui.msgListWidget->parentWidget());
+	message->setUserName(currentUser.userName());
+	if (sendType == DATA_TYPE_SINGLE)
+	{
+		char temp[20];
+		memcpy(temp, data, 20);
+		message->m_toUserNameList.append(temp);
+	}
+	else if (sendType == DATA_TYPE_GROUP)
+	{
+		unsigned char count = data[0];
+		for (unsigned char i = 0; i < count; i++)
+		{
+			char temp[20];
+			memcpy(temp, data+1+20*i, 20);
+			message->m_toUserNameList.append(temp);
+		}
+	}
+	else if (sendType == DATA_TYPE_ALL)
+	{
+		unsigned char count = ui.userListWidget->count();
+		for (unsigned char i = 0; i < count; i++)
+		{
+			char temp[20];
+			UserInfo *user = (UserInfo *)ui.userListWidget->itemWidget(ui.userListWidget->item(i));
+			message->m_toUserNameList.append(user->userName());
+		}
+	}
+	else
+		;
+
+
+
 	QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
 	handleMessage(message, item, msg, time, Message::User_Me);
 	// 调用send函数
@@ -146,6 +219,9 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 	itemList.clear();
 	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
 	setButtonEnable();
+
+
+	on_userListWidget_itemDoubleClicked(ui.userListWidget->selectedItems().at(0));
 }
 
 void OneRoomClient::on_sendFileBtn_clicked()
@@ -311,6 +387,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			QString msg = QString::fromLocal8Bit(data+20);	
 
 			Message* message = new Message(ui.msgListWidget->parentWidget());
+
+			char temp_name[20];
+			memcpy(temp_name,data,20);
+
+		 	message->setUserName(QString::fromLocal8Bit(temp_name));
+			message->m_toUserNameList.append(currentUser.userName());
+
 			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
 			handleMessage(message, item, msg, time, Message::User_He);
 			break;
