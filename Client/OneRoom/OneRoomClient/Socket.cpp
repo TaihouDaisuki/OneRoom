@@ -71,12 +71,24 @@ void Socket::dataReceived()
 		head.seq = ntohl(head.seq);
 
 		char* temp_buf = NULL;
-
+		qint64 ret = 0, p = 0;
+		int n = 0;
 		if (head.dataLen == 0)
 			temp_buf = NULL;
 		else {
 			temp_buf = new char[head.dataLen];
-			tcpSocket->read(temp_buf, head.dataLen);
+			//do {
+			ret = tcpSocket->read(temp_buf + p, head.dataLen - p);
+				//p += ret;
+				//if (ret == 0) {	//	本次没读到东西
+				//	n++;
+				//	Sleep(1000);
+				//}
+				//else
+				//	n = 0;
+				//if (n == 10)	// 连续10次没读到东西跳出
+				//	break;
+			//} while (p < head.dataLen);
 		}
 		//std::cout << "getNewmessage" << std::endl;
 		emit getNewmessage(head, temp_buf);

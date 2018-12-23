@@ -265,8 +265,6 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 
 	// 判断数目
-	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
-	int nCount = itemList.count();
 	if (nCount < 1) {
 		// 无选择用户，提示需选择发送对象
 		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
@@ -337,6 +335,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 			socket.Send(head, data);
 			head.seq++;
 			progressDlg->setValue(head.seq);
+			Sleep(500);
 		}
 		break;
 	}
@@ -361,6 +360,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 			socket.Send(head, data);
 			head.seq++;
 			progressDlg->setValue(head.seq);
+			Sleep(500);
 		}
 		break;
 	}
@@ -385,6 +385,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 			socket.Send(head, data);
 			head.seq++;
 			progressDlg->setValue(head.seq);
+			Sleep(500);
 		}
 		break;
 	}
@@ -510,6 +511,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 			socket.Send(head, data);
 			head.seq++;
 			progressDlg->setValue(head.seq);
+			Sleep(500);
 		}
 		break;
 	}
@@ -535,6 +537,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 			socket.Send(head, data);
 			head.seq++;
 			progressDlg->setValue(head.seq);
+			Sleep(500);
 		}
 		break;
 	}
@@ -560,6 +563,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 			socket.Send(head, data);
 			head.seq++;
 			progressDlg->setValue(head.seq);
+			Sleep(500);
 		}
 		break;
 	}
@@ -586,13 +590,14 @@ void OneRoomClient::on_sendImgBtn_clicked()
 
 void OneRoomClient::on_settingBtn_clicked()
 {
+	settingBoard->ui.spinBox->setValue(historyNum);
 	settingBoard->show();
 }
 
 void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 {
 	// 数据
-	if (head.isData == 1)
+	if (head.isData)
 	{
 		switch (head.type & 0xf0) {
 		case DATA_TYPE_TEXT: {
@@ -616,10 +621,10 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
 			QString fileName = QString::fromLocal8Bit(data + 20);
-			QString path = QString::fromLocal8Bit("./Picture/") + fileName;
+			QString path = QString::fromLocal8Bit("./") + fileName;
 			QFile file(path);
 
-			file.open(QIODevice::ReadOnly | QIODevice::Append);
+			file.open(QIODevice::WriteOnly | QIODevice::Append);
 			file.write(data + 40, head.dataLen - 40);
 			file.close();
 
@@ -634,10 +639,10 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
 			QString fileName = QString::fromLocal8Bit(data + 20);
-			QString path = QString::fromLocal8Bit("./File/") + fileName;
+			QString path = QString::fromLocal8Bit("./") + fileName;
 			QFile file(path);
 
-			file.open(QIODevice::ReadOnly | QIODevice::Append);
+			file.open(QIODevice::WriteOnly | QIODevice::Append);
 			file.write(data + 40, head.dataLen - 40);
 			file.close();
 
@@ -649,7 +654,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		}
 			default:
-				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+				//QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
 		}
 	}
 	// 控制
@@ -710,8 +715,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			updateUserList();
 			break;
 		}
+		case SERVER_RETURN_HISTORY: {
+			historyWindow->ui.textBrowser->clear();
+			historyWindow->ui.textBrowser->setText(QString::fromLocal8Bit(data));
+			break;
+		}
 		default:
-			QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+			//QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
 		}
 	}
 
@@ -732,8 +742,8 @@ void OneRoomClient::on_msgHistoryBtn_clicked()
 	head.dataLen = 0;
 	head.isCut = 0;
 	head.type = CLINET_REQUIRE_HISTORY;
-
 	socket.Send(head, NULL);
+	historyWindow->show();
 }
 
 void OneRoomClient::handle_socket_error(QString errorMsg)

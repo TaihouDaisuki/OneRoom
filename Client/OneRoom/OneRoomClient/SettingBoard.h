@@ -10,6 +10,7 @@ class SettingBoard : public QMainWindow
 public:
 	SettingBoard(QWidget *parent = Q_NULLPTR);
 	ChangePasswordWindow *changePasswordWindow;
+	Ui::settingBoard ui;
 
 private slots:
 	void on_changePasswordBtn_clicked();
@@ -19,6 +20,4 @@ private slots:
 signals:
 	void historyList_num(int num);
 
-private:
-	Ui::settingBoard ui;
 };
