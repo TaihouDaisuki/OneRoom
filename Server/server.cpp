@@ -1,9 +1,13 @@
 #include "server.h"
+#include "tinyxml2.h"
 
 using namespace std;
+using namespace tinyxml2;
 
 const char _ip[] = "0.0.0.0";
 const int _port = 20610;
+const char logfilename[] = "server.log";
+const char xmlfilename[] = "user-config.xml";
 
 //==========ClientInfo==========
 ClientInfo::ClientInfo()
@@ -124,7 +128,7 @@ int ClientInfo::Rcv(void *const dst, const int len)
 {
     reset_read_buff(len);
     int _rs = Read_Bitstream();
-    while (_rs == READ_HUNGUP)
+    while (_rs == READ_HUNGUP || buffp[0] < bufflen[0])
     {
         sleep(1); // avoid occupy CPU
         _rs = Read_Bitstream();
@@ -137,7 +141,7 @@ int ClientInfo::Snd(void *const src, const int len)
 {
     Save_Buffer(src, len);
     int _ws = Write_Bitstream();
-    while (_ws == WRITE_HUNGUP)
+    while (_ws == WRITE_HUNGUP || buffp[1] < bufflen[1])
     {
         sleep(1); // avoid occupy CPU
         _ws = Write_Bitstream();
@@ -150,9 +154,6 @@ int ClientInfo::Snd(void *const src, const int len)
 ServerSock::ServerSock()
 {
     //==========log==========
-    logfile.open(logfilename, ios::out | ios::app);
-    get_time_to_log();
-    logfile << "Server Start Initializing" << endl << endl;
 
     //==========sock==========
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -237,6 +238,8 @@ int ServerSock::updatebfds(fd_set fds)
 
 int ServerSock::Server_Start()
 {
+    logfile.open(logfilename, ios::out | ios::app);
+
     get_time_to_log();
     logfile << "Server Start Running" << endl;
     logfile << "Linsten bind to fd = " << listenfd << endl << endl;
@@ -541,8 +544,8 @@ int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit ma
     _Packet.Datalen = htonl(sizeof(unsigned char));
     unsigned char message_cnt = (unsigned char)ReadXMLFile(client->userid, "history_num"); // get from xml file
     char reqbuffer[CTRLPACKLEN + sizeof(unsigned char)];
-    memcpy(reqbuffer, _Packet, CTRLPACKLEN);
-    memcpy(reqbuffer + CTRLPACKLEN, &reqbuffer);
+    memcpy(reqbuffer, &_Packet, CTRLPACKLEN);
+    memcpy(reqbuffer + CTRLPACKLEN, &message_cnt, sizeof(unsigned char));
     int _ws = client->Snd(&reqbuffer, CTRLPACKLEN + sizeof(unsigned char));
     if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
         log_out_unexpected(client);
@@ -653,7 +656,7 @@ int ServerSock::change_password_request(ClientInfo *client)
 int ServerSock::change_setting_request(ClientInfo *client)
 {
     unsigned char history_num;
-    _rs = client->Rcv(&history_num, sizeof(unsigned char));
+    int _rs = client->Rcv(&history_num, sizeof(unsigned char));
     if (_rs == READ_CLOSE || _rs == READ_ERROR)
     {
         log_out_unexpected(client);
@@ -980,10 +983,10 @@ int ServerSock::userlist_request_to_all()
     char buffer[MAXBUFFERLEN];
     bufferp = 0;
     list<ClientInfo>::iterator listit;
-    for (unsigned char _Seq = 0; _Seq <= _isCut; ++_Seq)
+    for (unsigned int Seq = 0; Seq <= Cut; ++Seq)
     {
         unsigned int _Seq = htonl(Seq);
-        unsigned int curlen = (Seq == Cut) ? (datalen - datap) : MAXDATALEN;
+        unsigned int curlen = (Seq == Cut) ? (datalen - bufferp) : MAXDATALEN;
         unsigned int _Datalen = htonl(curlen);
         _Packet.Seq = _Seq;
         _Packet.Datalen = _Datalen;
@@ -1016,14 +1019,15 @@ int ServerSock::get_history_request(ClientInfo *client)
     string history_message = "";
     mysql_get_message(client->userid, history_message, message_cnt);
 
-    int datalen = strlen(history_message) + 1;
-    char data = new(nothrow) char[bufflen];
+    int datalen = history_message.length() + 1;
+    char *data = new(nothrow) char[datalen];
     int datap = 0;
     if(data == NULL)
     {
         cerr << "Run out of memory" << endl;
         exit(EXIT_FAILURE);
     }
+    strcpy(data, history_message.c_str());
 
     unsigned int Cut = datalen / MAXDATALEN - 1 + !!(datalen % MAXDATALEN);
     unsigned int _isCut = htonl(Cut);
@@ -1042,7 +1046,7 @@ int ServerSock::get_history_request(ClientInfo *client)
         int _ws = client->Snd(buffer, CTRLPACKLEN + curlen);
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
         {
-            log_out_unexpected(&client);
+            log_out_unexpected(client);
             delete[] data;
             return -1;
         }
@@ -1087,7 +1091,7 @@ void ServerSock::get_time_to_log()
     tm* t= gmtime( &tt );
 
     logfile << "[" << t->tm_year + 1900 << "-" << t->tm_mon + 1 << "-" << t->tm_mday << " "
-        << t->tm_hour << ":" << t->tm_min << ":" << t->tm_se << "]" << endl;
+        << t->tm_hour << ":" << t->tm_min << ":" << t->tm_sec << "]" << endl;
 }
 
 // xml
@@ -1133,7 +1137,7 @@ void ServerSock::ChangeXMLFile(const int uid, const char* const item_name, const
 			continue;
 		}
 		configNode->FirstChildElement(item_name)->SetText(num_c);
-		xmlDocument.SaveFile(xmlPath.c_str());
+		xmlDocument.SaveFile(xmlfilename);
 		return;
 	}
 }

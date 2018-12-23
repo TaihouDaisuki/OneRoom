@@ -178,7 +178,7 @@ private:
     void get_time_to_log();
     // xml part
     int ReadXMLFile(const int uid, const char* const item_name);
-    void ChangeXMLFile(const int uid, const char* const item_name, const int num);
+    void ChangeXMLFile(const int uid, const char* const item_name, const unsigned int num);
     // mysql part
     int mysql_get_uid(const char* const account);
     void mysql_get_account(const int uid, char* const account);
@@ -200,10 +200,7 @@ private:
     int userreq; // 0-noneed 1-resend
 
     // log
-    const char logfilename[] = "server.log";
     ofstream logfile;
-    // xml
-    const char xmlfilename[] = "user-config.xml";
     // mysql
     MYSQL     *mysql;   
     MYSQL_RES *result; 

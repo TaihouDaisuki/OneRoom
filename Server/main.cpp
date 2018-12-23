@@ -30,8 +30,7 @@ int main()
 void reset_daemon()
 {
 	pid_t pid;
-	int i;
-	if(pid = fork())
+	if((pid = fork()))
 		exit(0);	//是父进程，则结束父进程
 	else if(pid < 0)
 		exit(1);	//fork失败，退出
@@ -39,7 +38,7 @@ void reset_daemon()
 	//是第一子进程，后台继续执行
 	setsid();		//第一子进程成为新的会话组长和进程组长
 	//与控制终端分离
-	if(pid = fork())
+	if((pid = fork()))
 		exit(0);	//是第一子进程，结束第一子进程
 	else if(pid < 0)
 		exit(1);	//fork失败，退出
