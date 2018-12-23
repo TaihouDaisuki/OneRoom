@@ -668,6 +668,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		}
 			default:
 				//QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+				break;
 		}
 	}
 	// ¿ØÖÆ
@@ -735,6 +736,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		}
 		default:
 			//QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+			break;
 		}
 	}
 
