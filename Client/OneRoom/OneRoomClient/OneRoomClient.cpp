@@ -226,6 +226,21 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 void OneRoomClient::on_sendFileBtn_clicked()
 {
+	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
+	int nCount = itemList.count();
+	if (nCount < 1) {
+		// 无选择用户，提示需选择发送对象
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
+		setButtonEnable();
+		return;
+	}
+	if (nCount > 1) {
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择单个用户发送文件"));
+		setButtonEnable();
+		return;
+	}
+
+
 	setButtonDisable();
 	//定义文件对话框类
 	QFileDialog *fileDialog = new QFileDialog(this);
@@ -245,6 +260,15 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	}
 	// send
 	QString msg = QString::fromLocal8Bit("[文件]");
+
+	if (fileNames.count() < 0)
+	{
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("未选择文件"));
+		setButtonEnable();
+		return;
+	}
+	QString filename_temp = fileNames.at(0);
+
 
 
 	setButtonEnable();
@@ -409,6 +433,21 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		}
 		case DATA_TYPE_FILE: {
+			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
+			handleMessageTime(time);
+			QString msg = QString::fromLocal8Bit(data + 20);
+
+			Message* message = new Message(ui.msgListWidget->parentWidget());
+
+			char temp_name[20];
+			memcpy(temp_name, data, 20);
+
+			message->setUserName(QString::fromLocal8Bit(temp_name));
+			message->m_toUserNameList.append(currentUser.userName());
+
+			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+			handleMessage(message, item, msg, time, Message::User_He);
+
 
 			break;
 		}
