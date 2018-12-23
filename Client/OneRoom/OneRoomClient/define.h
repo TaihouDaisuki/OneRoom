@@ -3,7 +3,7 @@
 #pragma comment(lib, "ws2_32")
 
 #define MAX_USERNAME_SIZE 20	// 最长用户名大小(含\0)
-#define PACKAGE_HEAD_SIZE 8		
+#define PACKAGE_HEAD_SIZE 16	
 #define PACKAGE_DATA_MAX_SIZE 2048	// 最长包大小
 #define MIN_PASSWORD_SIZE 10	// 最短密码长度
 #define MAX_PASSWORD_SIZE 20	// 含\0
@@ -47,23 +47,24 @@
 struct PackageHead {
 	unsigned char isData;
 	unsigned char type;
-	unsigned char isCut;
-	unsigned char seq;
+	unsigned char padding[2];
+	unsigned int isCut;
+	unsigned int seq;
 	int dataLen;
 };
 
 const PackageHead SingleHead = {
-	1,DATA_TYPE_SINGLE,0,0,0
+	1,DATA_TYPE_SINGLE,0,0,0,0
 };
 
 const PackageHead AllHead = {
-	1,DATA_TYPE_ALL,0,0,0
+	1,DATA_TYPE_ALL,0,0,0,0
 };
 
 const PackageHead GroupHead = {
-	1,DATA_TYPE_GROUP,0,0,0
+	1,DATA_TYPE_GROUP,0,0,0,0
 };
 
 const PackageHead SendTest = {
-	0,0x00,0,0,0
+	0,0x00,0,0,0,0
 };
