@@ -225,6 +225,21 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 
 void OneRoomClient::on_sendFileBtn_clicked()
 {
+	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
+	int nCount = itemList.count();
+	if (nCount < 1) {
+		// 无选择用户，提示需选择发送对象
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
+		setButtonEnable();
+		return;
+	}
+	if (nCount > 1) {
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择单个用户发送文件"));
+		setButtonEnable();
+		return;
+	}
+
+
 	setButtonDisable();
 	//定义文件对话框类
 	QFileDialog *fileDialog = new QFileDialog(this);
