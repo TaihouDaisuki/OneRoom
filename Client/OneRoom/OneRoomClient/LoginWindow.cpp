@@ -78,12 +78,12 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 		switch (head.type) {
 			case SERVER_RETUEN_ERROR_D: {
 				tcpclient->DisConnect();
-				if (info[0] == NO_SUCH_USER) {
+				if (info && info[0] == NO_SUCH_USER) {
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("不存在的用户名"));
 					ui.lineEdit->clear();
 					ui.lineEdit_2->clear();
 				}
-				else if (info[0] == PASSWORD_ERROR) {
+				else if (info && info[0] == PASSWORD_ERROR) {
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("密码错误"));
 					ui.lineEdit->clear();
 					ui.lineEdit_2->clear();
@@ -91,13 +91,13 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 				break;
 			}
 			case SERVER_RETURN_ERROR_C: {
-				if (info[0] == ENFORCE_CHANGE_PASSWORD) {
+				if (info && info[0] == ENFORCE_CHANGE_PASSWORD) {
 					init_password = ui.lineEdit_2->text();	// 要求强制修改密码代表当前用户输入的就是初始密码
 					changePwWin->show();
 					changePwWin->setFocus();
 					QMessageBox::warning(changePwWin, tr("FBI Warning"), QString::fromLocal8Bit("首次登陆请修改密码"));
 				}
-				else if (info[0] == PASSWORD_ERROR)
+				else if (info && info[0] == PASSWORD_ERROR)
 					emit change_password_result(ERROR);
 				else
 					QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("SERVER_RETURN_ERROR_C ERROR CODE ERROR"));

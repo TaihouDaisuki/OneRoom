@@ -50,7 +50,7 @@ struct PackageHead {
 	unsigned char padding[2];
 	unsigned int isCut;
 	unsigned int seq;
-	int dataLen;
+	unsigned int dataLen;
 };
 
 const PackageHead SingleHead = {

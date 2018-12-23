@@ -207,7 +207,6 @@ void OneRoomClient::on_sendMsgBtn_clicked()
 		;
 
 
-
 	QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
 	handleMessage(message, item, msg, time, Message::User_Me);
 	// 调用send函数
@@ -243,8 +242,10 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	{
 		fileNames = fileDialog->selectedFiles();
 	}
-	if (fileNames.count() == 0)
+	if (fileNames.count() == 0) {
+		setButtonEnable();
 		return;
+	}
 	QString msg = QString::fromLocal8Bit("[文件]");
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 
@@ -293,7 +294,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	switch (sendType) {
 	case DATA_TYPE_SINGLE: {
 		memcpy(&head, &SingleHead, sizeof(PackageHead));
-		head.type &= DATA_TYPE_FILE;
+		head.type |= DATA_TYPE_FILE;
 
 		// 单发目的用户名
 		UserInfo *user;
@@ -326,7 +327,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	}
 	case DATA_TYPE_GROUP: {
 		memcpy(&head, &GroupHead, sizeof(PackageHead));
-		head.type &= DATA_TYPE_FILE;
+		head.type |= DATA_TYPE_FILE;
 		userSize = addTargetUserData(itemList, data, nCount);
 		// copy filename
 		nameByteArray = fileInfo.fileName().toLocal8Bit();
@@ -350,7 +351,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	}
 	case DATA_TYPE_ALL: {
 		memcpy(&head, &AllHead, sizeof(PackageHead));
-		head.type &= DATA_TYPE_FILE;
+		head.type |= DATA_TYPE_FILE;
 
 		userSize = MAX_USERNAME_SIZE;	// 群发消息空出前20字节
 		// copy filename
@@ -412,8 +413,10 @@ void OneRoomClient::on_sendImgBtn_clicked()
 	{
 		fileNames = fileDialog->selectedFiles();
 	}
-	if (fileNames.count() == 0)
+	if (fileNames.count() == 0) {
+		setButtonEnable();
 		return;
+	}
 
 	// send
 	QString msg = QString::fromLocal8Bit("[图片]");
@@ -465,7 +468,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 	switch (sendType) {
 	case DATA_TYPE_SINGLE: {
 		memcpy(&head, &SingleHead, sizeof(PackageHead));
-		head.type &= DATA_TYPE_PICTURE;
+		head.type |= DATA_TYPE_PICTURE;
 
 		// 单发目的用户名
 		UserInfo *user;
@@ -497,7 +500,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 	}
 	case DATA_TYPE_GROUP: {
 		memcpy(&head, &GroupHead, sizeof(PackageHead));
-		head.type &= DATA_TYPE_PICTURE;
+		head.type |= DATA_TYPE_PICTURE;
 		userSize = addTargetUserData(itemList, data, nCount);
 		// copy filename
 		nameByteArray = fileInfo.fileName().toLocal8Bit();
@@ -522,7 +525,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 	}
 	case DATA_TYPE_ALL: {
 		memcpy(&head, &AllHead, sizeof(PackageHead));
-		head.type &= DATA_TYPE_PICTURE;
+		head.type |= DATA_TYPE_PICTURE;
 
 		userSize = MAX_USERNAME_SIZE;	// 群发消息空出前20字节
 		// copy filename
@@ -580,7 +583,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		case DATA_TYPE_TEXT: {
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
-			QString msg = QString::fromLocal8Bit(data+20);	
+			QString msg = QString::fromLocal8Bit(data + 20);	
 
 			Message* message = new Message(ui.msgListWidget->parentWidget());
 
@@ -651,7 +654,8 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		case SERVER_RETURN_SETTING:
 			// 确认登陆成功
-			//historyNum = data[0];
+			if(data)
+				historyNum = data[0];
 			break;
 		case SERVER_RETURN_ERROR_C:
 			if (data[0] == SEND_MESSAGE_FAIL) {
@@ -663,6 +667,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 				emit change_password_result(ERROR);
 			}
 			else {
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("SERVER_RETURN_ERROR_C"));
 				// nothing
 			}
 			break;
@@ -673,6 +678,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 				logout();	// 登出
 			}
 			else {
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("SERVER_RETUEN_ERROR_D"));
 				// nothing
 			}
 			break;

@@ -9,6 +9,6 @@ class HistoryWindow : public QMainWindow
 public:
 	HistoryWindow(QWidget *parent = Q_NULLPTR);
 
-private:
+//private:
 	Ui::HistoryWindow ui;
 };
