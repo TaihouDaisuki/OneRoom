@@ -631,6 +631,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			if (head.isCut == head.seq) {
 				Message* message = new Message(ui.msgListWidget->parentWidget());
 				QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+
+				char temp_name[20];
+				memcpy(temp_name, data, 20);
+
+				message->setUserName(QString::fromLocal8Bit(temp_name));
+				message->m_toUserNameList.append(currentUser.userName());
+
 				handleMessage(message, item, fileName, time, Message::User_He, Message::Msg_Img, path);
 			}
 			break;
@@ -649,7 +656,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			if (head.isCut == head.seq) {
 				Message* message = new Message(ui.msgListWidget->parentWidget());
 				QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+				char temp_name[20];
+				memcpy(temp_name, data, 20);
+
+				message->setUserName(QString::fromLocal8Bit(temp_name));
+				message->m_toUserNameList.append(currentUser.userName());
 				handleMessage(message, item, fileName, time, Message::User_He, Message::Msg_File);
+
 			}
 			break;
 		}
