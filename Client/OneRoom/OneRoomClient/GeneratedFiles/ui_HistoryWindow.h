@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'HistoryWindow.ui'
 **
-** Created by: Qt User Interface Compiler version 5.11.1
+** Created by: Qt User Interface Compiler version 5.11.2
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -12,7 +12,6 @@
 #include <QtCore/QVariant>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QTextBrowser>
-#include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -20,7 +19,6 @@ QT_BEGIN_NAMESPACE
 class Ui_HistoryWindow
 {
 public:
-    QVBoxLayout *verticalLayout;
     QTextBrowser *textBrowser;
 
     void setupUi(QWidget *HistoryWindow)
@@ -28,13 +26,11 @@ public:
         if (HistoryWindow->objectName().isEmpty())
             HistoryWindow->setObjectName(QStringLiteral("HistoryWindow"));
         HistoryWindow->resize(625, 508);
-        verticalLayout = new QVBoxLayout(HistoryWindow);
-        verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
+        HistoryWindow->setMinimumSize(QSize(625, 508));
+        HistoryWindow->setMaximumSize(QSize(625, 508));
         textBrowser = new QTextBrowser(HistoryWindow);
         textBrowser->setObjectName(QStringLiteral("textBrowser"));
-
-        verticalLayout->addWidget(textBrowser);
-
+        textBrowser->setGeometry(QRect(9, 9, 611, 491));
 
         retranslateUi(HistoryWindow);
 

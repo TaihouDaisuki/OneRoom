@@ -667,6 +667,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		}
 			default:
+				break;
 				//QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
 				break;
 		}
@@ -735,6 +736,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		}
 		default:
+			break;
 			//QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
 			break;
 		}
@@ -768,7 +770,7 @@ void OneRoomClient::handle_socket_error(QString errorMsg)
 
 void OneRoomClient::send_history_num_setting(int num)
 {
-	int len = sizeof(int);
+	int len = sizeof(char);
 	PackageHead head;
 	char* data = new char[len];
 	head.isData = 0;
@@ -776,7 +778,7 @@ void OneRoomClient::send_history_num_setting(int num)
 	head.isCut = 0;
 	head.type = CLIENT_CHANGE_SETTING;
 
-	*(int*)data = htonl(num);
+	data[0] = num;
 
 	socket.Send(head, data);
 
@@ -919,7 +921,7 @@ bool OneRoomClient::eventFilter(QObject *obj, QEvent *e)
 	return false;
 }
 
-void OneRoomClient::reshow_mainwindow(QString userName, QString password, int histroyListNum)
+void OneRoomClient::reshow_mainwindow(QString userName, QString password, unsigned char histroyListNum)
 {
 	// ≥ı º÷µ…Ë÷√
 	currentUser.setInfo("", userName, QString::number(QDateTime::currentDateTime().toTime_t()), password);
