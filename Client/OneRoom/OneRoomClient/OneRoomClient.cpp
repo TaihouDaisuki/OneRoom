@@ -265,8 +265,8 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 
 	// 判断数目
-	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
-	int nCount = itemList.count();
+	//QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
+	//int nCount = itemList.count();
 	if (nCount < 1) {
 		// 无选择用户，提示需选择发送对象
 		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
@@ -337,6 +337,7 @@ void OneRoomClient::on_sendFileBtn_clicked()
 			socket.Send(head, data);
 			head.seq++;
 			progressDlg->setValue(head.seq);
+			Sleep(1000);
 		}
 		break;
 	}
@@ -626,6 +627,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			if (head.isCut == head.seq) {
 				Message* message = new Message(ui.msgListWidget->parentWidget());
 				QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+
+				char temp_name[20];
+				memcpy(temp_name, data, 20);
+
+				message->setUserName(QString::fromLocal8Bit(temp_name));
+				message->m_toUserNameList.append(currentUser.userName());
+
 				handleMessage(message, item, fileName, time, Message::User_He, Message::Msg_Img, path);
 			}
 			break;
@@ -644,7 +652,13 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			if (head.isCut == head.seq) {
 				Message* message = new Message(ui.msgListWidget->parentWidget());
 				QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+				char temp_name[20];
+				memcpy(temp_name, data, 20);
+
+				message->setUserName(QString::fromLocal8Bit(temp_name));
+				message->m_toUserNameList.append(currentUser.userName());
 				handleMessage(message, item, fileName, time, Message::User_He, Message::Msg_File);
+
 			}
 			break;
 		}
