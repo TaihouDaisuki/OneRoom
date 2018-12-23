@@ -37,7 +37,7 @@ private slots:
 	void on_package_arrived(PackageHead head, char* const data);
 	void on_settingBtn_clicked();
 	void on_msgHistoryBtn_clicked();
-	void reshow_mainwindow(QString userName, QString password, int histroyListNum);
+	void reshow_mainwindow(QString userName, QString password, unsigned char histroyListNum);
 	void handle_socket_error(QString errorMsg);
 	void send_history_num_setting(int num);
 	void send_password_setting(QString password);
@@ -59,7 +59,7 @@ private:
 	QProgressDialog *progressDlg;
 	HistoryWindow *historyWindow;
 
-	int historyNum;
+	unsigned char historyNum;
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
 	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器
 	void setButtonDisable();
