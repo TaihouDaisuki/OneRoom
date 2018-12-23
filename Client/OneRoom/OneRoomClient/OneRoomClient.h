@@ -28,6 +28,7 @@ public:
 	void handleMessage(Message *message, QListWidgetItem *item, QString text, QString time, Message::User_Type type, Message::Msg_Type msgType = Message::Msg_Text, QString imgPath = QString::null);
 	void handleMessageTime(QString curMsgTime);
 	int addTargetUserData(QList<QListWidgetItem *> &itemList, char* const data, int nCount);
+	static unsigned char o_typeSize;
 
 private slots:
 	void on_sendMsgBtn_clicked();
@@ -37,9 +38,9 @@ private slots:
 	void on_package_arrived(PackageHead head, char* const data);
 	void on_settingBtn_clicked();
 	void on_msgHistoryBtn_clicked();
-	void reshow_mainwindow(QString userName, QString password, unsigned char histroyListNum);
+	void reshow_mainwindow(QString userName, QString password, unsigned char histroyListNum, unsigned char typeSize);
 	void handle_socket_error(QString errorMsg);
-	void send_history_num_setting(int num);
+	void send_history_num_setting(unsigned char num, unsigned char size);
 	void send_password_setting(QString password);
 	void on_userListWidget_itemDoubleClicked(QListWidgetItem *item);
 signals:
@@ -60,6 +61,7 @@ private:
 	HistoryWindow *historyWindow;
 
 	unsigned char historyNum;
+
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
 	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器
 	void setButtonDisable();

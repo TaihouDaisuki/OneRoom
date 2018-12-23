@@ -18,6 +18,6 @@ private slots:
 	void on_changeButton_clicked();
 
 signals:
-	void historyList_num(int num);
+	void historyList_num(unsigned char num, unsigned char size);
 
 };

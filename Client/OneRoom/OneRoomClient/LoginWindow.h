@@ -51,6 +51,6 @@ public slots:
 	void handle_socket_error(QString errorMsg);
 
 signals:
-	void sendsignal(QString userName, QString password, int histroyListNum);
+	void sendsignal(QString userName, QString password, unsigned char histroyListNum, unsigned char typeSize);
 	void change_password_result(int result);
 };

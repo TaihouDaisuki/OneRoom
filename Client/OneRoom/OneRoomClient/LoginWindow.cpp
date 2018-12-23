@@ -112,9 +112,9 @@ void LoginWindow::ReceivePack(PackageHead head, char *info)
 			case SERVER_RETURN_SETTING: {
 				this->hide();
 				if(info)
-					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), info[0]);	// 参数需发送设置信息
+					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), info[0], info[1]);	// 参数需发送设置信息
 				else
-					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), 10);	// 参数需发送设置信息
+					emit sendsignal(ui.lineEdit->text(), ui.lineEdit_2->text(), 10, 12);	// 参数需发送设置信息
 				break;
 			}
 			default:

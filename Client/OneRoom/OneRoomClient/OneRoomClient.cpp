@@ -6,6 +6,8 @@
 #include <qdebug.h>
 #include <Windows.h>
 
+unsigned char OneRoomClient::o_typeSize = 12;
+
 OneRoomClient::OneRoomClient(QWidget *parent)
 	: QMainWindow(parent)
 {
@@ -591,6 +593,7 @@ void OneRoomClient::on_sendImgBtn_clicked()
 void OneRoomClient::on_settingBtn_clicked()
 {
 	settingBoard->ui.spinBox->setValue(historyNum);
+	settingBoard->ui.spinBox_2->setValue(OneRoomClient::o_typeSize);
 	settingBoard->show();
 }
 
@@ -766,9 +769,9 @@ void OneRoomClient::handle_socket_error(QString errorMsg)
 	QMessageBox::warning(this, tr("FBI Warning"), errorMsg);
 }
 
-void OneRoomClient::send_history_num_setting(int num)
+void OneRoomClient::send_history_num_setting(unsigned char num, unsigned char size)
 {
-	int len = sizeof(char);
+	int len = 2;
 	PackageHead head;
 	char* data = new char[len];
 	head.isData = 0;
@@ -777,7 +780,7 @@ void OneRoomClient::send_history_num_setting(int num)
 	head.type = CLIENT_CHANGE_SETTING;
 
 	data[0] = num;
-
+	data[1] = size;
 	socket.Send(head, data);
 
 	delete data;
@@ -919,12 +922,12 @@ bool OneRoomClient::eventFilter(QObject *obj, QEvent *e)
 	return false;
 }
 
-void OneRoomClient::reshow_mainwindow(QString userName, QString password, unsigned char histroyListNum)
+void OneRoomClient::reshow_mainwindow(QString userName, QString password, unsigned char histroyListNum, unsigned char typeSize)
 {
 	// ³õÊ¼ÖµÉèÖÃ
 	currentUser.setInfo("", userName, QString::number(QDateTime::currentDateTime().toTime_t()), password);
 	historyNum = histroyListNum;
-
+	OneRoomClient::o_typeSize = typeSize;
 	this->show();
 	this->setFocus();
 	disconnect(&this->socket, &Socket::getNewmessage, this->loginWindow, &LoginWindow::ReceivePack);

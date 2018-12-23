@@ -22,5 +22,5 @@ void SettingBoard::on_cancelButton_clicked()
 void SettingBoard::on_changeButton_clicked()
 {
 	ui.spinBox->hide();
-	emit historyList_num(ui.spinBox->value());
+	emit historyList_num(ui.spinBox->value(), ui.spinBox_2->value());
 }

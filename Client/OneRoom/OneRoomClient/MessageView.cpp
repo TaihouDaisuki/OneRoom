@@ -1,5 +1,5 @@
 #include "MessageView.h"
-
+#include "OneRoomClient.h"
 #include <QFontMetrics>
 #include <QPaintEvent>
 #include <QDateTime>
@@ -12,7 +12,7 @@ Message::Message(QWidget *parent) : QWidget(parent)
 {
 	QFont te_font = this->font();
 	te_font.setFamily("MicrosoftYaHei");
-	te_font.setPointSize(12);
+	te_font.setPointSize(OneRoomClient::o_typeSize);
 	//    te_font.setWordSpacing(0);
 	//    te_font.setLetterSpacing(QFont::PercentageSpacing,0);
 	//    te_font.setLetterSpacing(QFont::PercentageSpacing, 100);          //300%,100为默认  //设置字间距%
