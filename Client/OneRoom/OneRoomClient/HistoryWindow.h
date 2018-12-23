@@ -11,5 +11,4 @@ public:
 
 private:
 	Ui::HistoryWindow ui;
-
 };

@@ -57,6 +57,7 @@ private:
 	SettingBoard *settingBoard;
 	QListWidget *msgListWidgetShow;
 	QProgressDialog *progressDlg;
+	HistoryWindow *historyWindow;
 
 	int historyNum;
 	void resizeEvent(QResizeEvent *event); // 重载事件函数

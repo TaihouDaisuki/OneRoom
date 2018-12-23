@@ -23,6 +23,7 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	loginWindow->tcpclient = &this->socket;
 	loginWindow->show();
 	settingBoard = new SettingBoard(this);
+	historyWindow = new HistoryWindow(this);
 
 	// connect
 	connect(this->loginWindow->tcpclient, &Socket::sock_error_occurred, this->loginWindow, &LoginWindow::handle_socket_error);
@@ -650,6 +651,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		case SERVER_RETURN_SETTING:
 			// 确认登陆成功
+			//historyNum = data[0];
 			break;
 		case SERVER_RETURN_ERROR_C:
 			if (data[0] == SEND_MESSAGE_FAIL) {
@@ -703,7 +705,14 @@ void OneRoomClient::on_logOutBtn_clicked()
 
 void OneRoomClient::on_msgHistoryBtn_clicked()
 {
+	// 请求拉取设置
+	PackageHead head;
+	head.isData = 0;
+	head.dataLen = 0;
+	head.isCut = 0;
+	head.type = CLINET_REQUIRE_HISTORY;
 
+	socket.Send(head, NULL);
 }
 
 void OneRoomClient::handle_socket_error(QString errorMsg)
@@ -716,7 +725,7 @@ void OneRoomClient::send_history_num_setting(int num)
 	int len = sizeof(int);
 	PackageHead head;
 	char* data = new char[len];
-	head.isData = 1;
+	head.isData = 0;
 	head.dataLen = len;
 	head.isCut = 0;
 	head.type = CLIENT_CHANGE_SETTING;
@@ -733,7 +742,7 @@ void OneRoomClient::send_password_setting(QString password)
 	QByteArray pwByteArray;
 	PackageHead head;
 	char* data = new char[MAX_PASSWORD_SIZE * 2];
-	head.isData = 1;
+	head.isData = 0;
 	head.dataLen = MAX_PASSWORD_SIZE * 2;
 	head.isCut = 0;
 	head.type = CLIENT_CHANGE_PASSWORD;
@@ -868,6 +877,7 @@ void OneRoomClient::reshow_mainwindow(QString userName, QString password, int hi
 {
 	// 初始值设置
 	currentUser.setInfo("", userName, QString::number(QDateTime::currentDateTime().toTime_t()), password);
+	historyNum = histroyListNum;
 
 	this->show();
 	this->setFocus();
