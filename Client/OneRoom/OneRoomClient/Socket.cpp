@@ -7,6 +7,7 @@ Socket::Socket(QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f)
 	tcpSocket = NULL;
 	sslSocket = NULL;
 
+	headFlag = false;
 }
 
 int Socket::Send(PackageHead head, const char * data)
@@ -63,35 +64,26 @@ void Socket::dataReceived()
 {
 	while (tcpSocket->bytesAvailable() > 0)
 	{
-		//std::cout << tcpSocket->bytesAvailable() << std::endl;
-		PackageHead head;
-		tcpSocket->read((char*)&head, sizeof(PackageHead));
-		head.dataLen = ntohl(head.dataLen);
-		head.isCut = ntohl(head.isCut);
-		head.seq = ntohl(head.seq);
-
-		char* temp_buf = NULL;
-		qint64 ret = 0, p = 0;
-		int n = 0;
-		if (head.dataLen == 0)
-			temp_buf = NULL;
-		else {
-			temp_buf = new char[head.dataLen];
-			//do {
-			ret = tcpSocket->read(temp_buf + p, head.dataLen - p);
-				//p += ret;
-				//if (ret == 0) {	//	本次没读到东西
-				//	n++;
-				//	Sleep(1000);
-				//}
-				//else
-				//	n = 0;
-				//if (n == 10)	// 连续10次没读到东西跳出
-				//	break;
-			//} while (p < head.dataLen);
+		if (headFlag == false) {
+			tcpSocket->read((char*)&head, sizeof(PackageHead));
+			head.dataLen = ntohl(head.dataLen);
+			head.isCut = ntohl(head.isCut);
+			head.seq = ntohl(head.seq);
+			headFlag = true;
+			if (head.dataLen == 0)
+			{
+				emit getNewmessage(head, NULL);
+			}
 		}
-		//std::cout << "getNewmessage" << std::endl;
-		emit getNewmessage(head, temp_buf);
+		int able = tcpSocket->bytesAvailable();
+		if (tcpSocket->bytesAvailable() >= head.dataLen) {
+			this->buff = new char[PACKAGE_DATA_MAX_SIZE];
+			tcpSocket->read(buff, head.dataLen);
+			headFlag = false;
+			emit getNewmessage(head, buff);
+		}
+		else
+			;
 	}
 }
 

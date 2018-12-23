@@ -20,6 +20,10 @@ public:
 	//~TcpClient();
 	std::string ip;
 	int port;
+	bool headFlag;
+	int haveRead;
+	char* buff;
+	PackageHead head;
 	QTcpSocket *tcpSocket;
 	QSslSocket *sslSocket;
 	int Send(PackageHead head, const char * data);	// 

@@ -667,8 +667,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		}
 			default:
-				break;
-				//QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
+				QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("server return error"));
 				break;
 		}
 	}
