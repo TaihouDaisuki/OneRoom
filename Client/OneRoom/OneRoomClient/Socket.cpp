@@ -11,13 +11,11 @@ Socket::Socket(QWidget *parent, Qt::WindowFlags f) : QDialog(parent, f)
 
 int Socket::Send(PackageHead head, const char * data)
 {
-	/*char* buf;
-	memcpy(buf, &head, sizeof(PackageHead));
-	
-	if (data)
-		memcpy(buf + sizeof(PackageHead), data, head.dataLen);*/
 	int len = head.dataLen;
+	head.isCut = htonl(head.isCut);
+	head.seq = htonl(head.seq);
 	head.dataLen = htonl(head.dataLen);
+
 	tcpSocket->write((char*)&head, sizeof(PackageHead));
 	if (data!=NULL)
 		tcpSocket->write(data, len);
@@ -67,8 +65,11 @@ void Socket::dataReceived()
 	{
 		//std::cout << tcpSocket->bytesAvailable() << std::endl;
 		PackageHead head;
-		tcpSocket->read((char*)&head, 8);
+		tcpSocket->read((char*)&head, sizeof(PackageHead));
 		head.dataLen = ntohl(head.dataLen);
+		head.isCut = ntohl(head.isCut);
+		head.seq = ntohl(head.seq);
+
 		char* temp_buf = NULL;
 
 		if (head.dataLen == 0)

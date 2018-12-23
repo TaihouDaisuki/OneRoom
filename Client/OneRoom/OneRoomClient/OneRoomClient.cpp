@@ -4,6 +4,7 @@
 #include <qmessagebox.h>
 #include <qfiledialog.h>
 #include <qdebug.h>
+#include <Windows.h>
 
 OneRoomClient::OneRoomClient(QWidget *parent)
 	: QMainWindow(parent)
@@ -17,13 +18,13 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	ui.msgTextEdit->installEventFilter(this);
 	setStyleSheet("background: rgb(33,33,33);border-width:0;border-style:outset;border:1px solid grey;color:white");
 
-
 	// 初始化子窗口
 	loginWindow = new LoginWindow(this);
 	loginWindow->tcpclient = &this->socket;
 	loginWindow->show();
 	settingBoard = new SettingBoard(this);
-	
+	historyWindow = new HistoryWindow(this);
+
 	// connect
 	connect(this->loginWindow->tcpclient, &Socket::sock_error_occurred, this->loginWindow, &LoginWindow::handle_socket_error);
 	connect(this->loginWindow, &LoginWindow::sendsignal, this, &OneRoomClient::reshow_mainwindow);
@@ -36,7 +37,6 @@ OneRoomClient::OneRoomClient(QWidget *parent)
 	setWindowOpacity(0.9);
 
 }
-
 
 void OneRoomClient::on_userListWidget_itemDoubleClicked(QListWidgetItem *item)
 {
@@ -258,41 +258,178 @@ void OneRoomClient::on_sendFileBtn_clicked()
 	{
 		fileNames = fileDialog->selectedFiles();
 	}
-	// send
+	if (fileNames.count() == 0)
+		return;
 	QString msg = QString::fromLocal8Bit("[文件]");
+	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 
-	if (fileNames.count() < 0)
-	{
-		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("未选择文件"));
+	// 判断数目
+	QList<QListWidgetItem *> itemList = ui.userListWidget->selectedItems();	// 所有选中的项目
+	int nCount = itemList.count();
+	if (nCount < 1) {
+		// 无选择用户，提示需选择发送对象
+		QMessageBox::warning(this, tr("FBI Warning"), QString::fromLocal8Bit("请选择发送用户"));
 		setButtonEnable();
 		return;
 	}
-	QString filename_temp = fileNames.at(0);
 
+	// 判断消息发送方式
+	unsigned char sendType = 0;
+	if (nCount == ui.userListWidget->count())
+		sendType = DATA_TYPE_ALL;
+	else if (nCount == 1)
+		sendType = DATA_TYPE_SINGLE;
+	else
+		sendType = DATA_TYPE_GROUP;
+	
+	// 构成数据包
+	// 打开文件
+	QFile file(fileNames[0]);
+	QFileInfo fileInfo(fileNames[0]);
+	PackageHead head;
+	QByteArray nameByteArray;
+	
+	file.open(QIODevice::ReadOnly);
 
+	char* data = new(std::nothrow) char[PACKAGE_DATA_MAX_SIZE];
+	if (data == NULL) {
+		QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+		return;
+	}
+	int dataSize = 0;	// 文件数据长度
+	int userSize = 0;	// 用户信息长度
 
+	progressDlg = new QProgressDialog(this);
+	progressDlg->setWindowModality(Qt::WindowModal);
+	progressDlg->setMinimumDuration(0);
+	progressDlg->setWindowTitle("Please Wait...");
+	progressDlg->setLabelText("Sending...");
+
+	switch (sendType) {
+	case DATA_TYPE_SINGLE: {
+		memcpy(&head, &SingleHead, sizeof(PackageHead));
+		head.type &= DATA_TYPE_FILE;
+
+		// 单发目的用户名
+		UserInfo *user;
+		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[0]);
+		nameByteArray = user->userName().toLocal8Bit();
+		userSize = MAX_USERNAME_SIZE;
+
+		// copy username
+		memcpy(data, nameByteArray.data(), nameByteArray.length() + 1);
+		// copy filename
+		nameByteArray = fileInfo.fileName().toLocal8Bit();
+		memcpy(&data[userSize], nameByteArray.data(), nameByteArray.length() + 1);
+		userSize += MAX_USERNAME_SIZE;
+
+		// 计算分包数量
+		qint64 size = fileInfo.size();
+		head.isCut = fileInfo.size() / (PACKAGE_DATA_MAX_SIZE - userSize);
+		if (head.isCut && !(fileInfo.size() % (PACKAGE_DATA_MAX_SIZE - userSize))) // 已分包，且被整除，应减少一个包
+			head.isCut -= 1;
+
+		// 循环读取分包并发送
+		progressDlg->setRange(0, head.isCut);
+		while ((dataSize = file.read(&data[userSize], PACKAGE_DATA_MAX_SIZE - userSize)) > 0) {
+			head.dataLen = userSize + dataSize;
+			socket.Send(head, data);
+			head.seq++;
+			progressDlg->setValue(head.seq);
+		}
+		break;
+	}
+	case DATA_TYPE_GROUP: {
+		memcpy(&head, &GroupHead, sizeof(PackageHead));
+		head.type &= DATA_TYPE_FILE;
+		userSize = addTargetUserData(itemList, data, nCount);
+		// copy filename
+		nameByteArray = fileInfo.fileName().toLocal8Bit();
+		memcpy(&data[userSize], nameByteArray.data(), nameByteArray.length() + 1);
+		userSize += MAX_USERNAME_SIZE;
+
+		// 计算分包数量
+		head.isCut = fileInfo.size() / (PACKAGE_DATA_MAX_SIZE - userSize);
+		if (head.isCut && !(fileInfo.size() % (PACKAGE_DATA_MAX_SIZE - userSize))) // 已分包，且被整除，应减少一个包
+			head.isCut -= 1;
+
+		// 循环读取分包并发送
+		progressDlg->setRange(0, head.isCut);
+		while (dataSize = file.read(&data[userSize], PACKAGE_DATA_MAX_SIZE - userSize)) {
+			head.dataLen = userSize + dataSize;
+			socket.Send(head, data);
+			head.seq++;
+			progressDlg->setValue(head.seq);
+		}
+		break;
+	}
+	case DATA_TYPE_ALL: {
+		memcpy(&head, &AllHead, sizeof(PackageHead));
+		head.type &= DATA_TYPE_FILE;
+
+		userSize = MAX_USERNAME_SIZE;	// 群发消息空出前20字节
+		// copy filename
+		nameByteArray = fileInfo.fileName().toLocal8Bit();
+		memcpy(&data[userSize], nameByteArray.data(), nameByteArray.length() + 1);
+		userSize += MAX_USERNAME_SIZE;
+		// 计算分包数量
+		head.isCut = fileInfo.size() / (PACKAGE_DATA_MAX_SIZE - userSize);
+		if (head.isCut && !(fileInfo.size() % (PACKAGE_DATA_MAX_SIZE - userSize))) // 已分包，且被整除，应减少一个包
+			head.isCut -= 1;
+
+		// 循环读取分包并发送
+		progressDlg->setRange(0, head.isCut);
+		while (dataSize = file.read(&data[userSize], PACKAGE_DATA_MAX_SIZE - userSize)) {
+			head.dataLen = userSize + dataSize;
+			socket.Send(head, data);
+			head.seq++;
+			progressDlg->setValue(head.seq);
+		}
+		break;
+	}
+	default:
+		QMessageBox::warning(this, tr("FBI Warning"), tr("add message head error"));
+		return;
+	}
+	progressDlg->close();
+	//progressDlg->setValue(0);
+
+	Message* message = new Message(ui.msgListWidget->parentWidget());
+	QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+	handleMessage(message, item, msg, time, Message::User_Me, Message::Msg_File, fileNames[0]);
+
+	delete data;
+	sendMsgQueue.push_back(message);
+	file.close();
+	//清空临时条目列表
+	itemList.clear();
+	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
+	item->setSelected(true);
 	setButtonEnable();
 }
 
 void OneRoomClient::on_sendImgBtn_clicked()
 {
 	setButtonDisable();
-	//定义文件对话框类
-	QFileDialog *fileDialog = new QFileDialog(this);
-	//定义文件对话框标题
+	// 定义文件对话框类
+	QFileDialog *fileDialog = new QFileDialog;
+	// 定义文件对话框标题
 	fileDialog->setWindowTitle(tr("选择图片"));
-	//设置默认文件路径
+	// 设置默认文件路径
 	fileDialog->setDirectory(".");
-	//设置文件过滤器
+	// 设置文件过滤器
 	fileDialog->setNameFilter(tr("Images(*.png *.jpg *.jpeg *.bmp)"));
-	//设置视图模式
+	// 设置视图模式
 	fileDialog->setViewMode(QFileDialog::Detail);
-	//打印所有选择的图片的路径
+	// 打印所有选择的图片的路径
 	QStringList fileNames;
 	if (fileDialog->exec())
 	{
 		fileNames = fileDialog->selectedFiles();
 	}
+	if (fileNames.count() == 0)
+		return;
+
 	// send
 	QString msg = QString::fromLocal8Bit("[图片]");
 	QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
@@ -317,80 +454,130 @@ void OneRoomClient::on_sendImgBtn_clicked()
 		sendType = DATA_TYPE_GROUP;
 
 	// 构成数据包
+	// 打开文件
+	QFile file(fileNames[0]);
+	QFileInfo fileInfo(fileNames[0]);
 	QByteArray msgByteArray = msg.toLocal8Bit();	// 转为编码格式
-	// 添加头部
 	PackageHead head;
-	char* data = NULL;
-	int dataSize = 0;
+	QByteArray nameByteArray;
+
+	file.open(QIODevice::ReadOnly);
+
+	char* data = new(std::nothrow) char[PACKAGE_DATA_MAX_SIZE];
+	if (data == NULL) {
+		QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
+		return;
+	}
+	int dataSize = 0;	// 文件数据长度
+	int userSize = 0;	// 用户信息长度
+
+	progressDlg = new QProgressDialog;
+	progressDlg->setWindowModality(Qt::WindowModal);
+	progressDlg->setMinimumDuration(0);
+	progressDlg->setWindowTitle("Please Wait...");
+	progressDlg->setLabelText("Sending...");
 
 	switch (sendType) {
 	case DATA_TYPE_SINGLE: {
 		memcpy(&head, &SingleHead, sizeof(PackageHead));
-		dataSize = MAX_USERNAME_SIZE + msgByteArray.length() + 1;	// 数据部分含尾零
-		data = new(std::nothrow) char[dataSize];
-		if (data == NULL) {
-			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
-			return;
-		}
+		head.type &= DATA_TYPE_PICTURE;
+
 		// 单发目的用户名
 		UserInfo *user;
-		QByteArray userNameByteArray;
 		user = (UserInfo *)ui.userListWidget->itemWidget(itemList[0]);
-		userNameByteArray = user->userName().toLocal8Bit();
-		memcpy(data, userNameByteArray.data(), userNameByteArray.length() + 1);
-		
-		// copy data
-		memcpy(&data[MAX_USERNAME_SIZE], msgByteArray.data(), msgByteArray.length() + 1);
+		nameByteArray = user->userName().toLocal8Bit();
+		userSize = MAX_USERNAME_SIZE;
+
+		// copy username
+		memcpy(data, nameByteArray.data(), nameByteArray.length() + 1);
+		// copy filename
+		nameByteArray = fileInfo.fileName().toLocal8Bit();
+		memcpy(&data[userSize], nameByteArray.data(), nameByteArray.length() + 1);
+		userSize += MAX_USERNAME_SIZE;
+
+		// 计算分包数量
+		head.isCut = fileInfo.size() / (PACKAGE_DATA_MAX_SIZE - userSize);
+		if (head.isCut && !(fileInfo.size() % (PACKAGE_DATA_MAX_SIZE - userSize))) // 已分包，且被整除，应减少一个包
+			head.isCut -= 1;
+
+		// 循环读取分包并发送
+		progressDlg->setRange(0, head.isCut);
+		while (dataSize = file.read(&data[userSize], PACKAGE_DATA_MAX_SIZE - userSize)) {
+			head.dataLen = userSize + dataSize;
+			socket.Send(head, data);
+			head.seq++;
+			progressDlg->setValue(head.seq);
+		}
 		break;
 	}
 	case DATA_TYPE_GROUP: {
 		memcpy(&head, &GroupHead, sizeof(PackageHead));
-		// 添加数据
-		dataSize = 1 + (nCount * MAX_USERNAME_SIZE) + msgByteArray.length() + 1;	// 数据部分含尾零
-		data = new(std::nothrow) char[dataSize];
-		if (data == NULL) {
-			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
-			return;
+		head.type &= DATA_TYPE_PICTURE;
+		userSize = addTargetUserData(itemList, data, nCount);
+		// copy filename
+		nameByteArray = fileInfo.fileName().toLocal8Bit();
+		memcpy(&data[userSize], nameByteArray.data(), nameByteArray.length() + 1);
+		userSize += MAX_USERNAME_SIZE;
+
+		// 计算分包数量
+		head.isCut = fileInfo.size() / (PACKAGE_DATA_MAX_SIZE - userSize);
+		if (head.isCut && !(fileInfo.size() % (PACKAGE_DATA_MAX_SIZE - userSize))) // 已分包，且被整除，应减少一个包
+			head.isCut -= 1;
+
+		// 循环读取分包并发送
+		progressDlg->setRange(0, head.isCut);
+		progressDlg->show();
+		while (dataSize = file.read(&data[userSize], PACKAGE_DATA_MAX_SIZE - userSize)) {
+			head.dataLen = userSize + dataSize;
+			socket.Send(head, data);
+			head.seq++;
+			progressDlg->setValue(head.seq);
 		}
-		int length = addTargetUserData(itemList, data, nCount);
-		
-		// copy data
-		memcpy(&data[length], msgByteArray.data(), msgByteArray.length() + 1);
 		break;
 	}
 	case DATA_TYPE_ALL: {
 		memcpy(&head, &AllHead, sizeof(PackageHead));
-		dataSize = MAX_USERNAME_SIZE + msgByteArray.length() + 1;	// 数据部分含尾零
-		data = new(std::nothrow) char[dataSize];
-		if (data == NULL) {
-			QMessageBox::warning(this, tr("FBI Warning"), tr("new error"));
-			return;
+		head.type &= DATA_TYPE_PICTURE;
+
+		userSize = MAX_USERNAME_SIZE;	// 群发消息空出前20字节
+		// copy filename
+		nameByteArray = fileInfo.fileName().toLocal8Bit();
+		memcpy(&data[userSize], nameByteArray.data(), nameByteArray.length() + 1);
+		userSize += MAX_USERNAME_SIZE;
+		// 计算分包数量
+		head.isCut = fileInfo.size() / (PACKAGE_DATA_MAX_SIZE - userSize);
+		if (head.isCut && !(fileInfo.size() % (PACKAGE_DATA_MAX_SIZE - userSize))) // 已分包，且被整除，应减少一个包
+			head.isCut -= 1;
+
+		// 循环读取分包并发送
+		progressDlg->setRange(0, head.isCut);
+		progressDlg->show();
+		while (dataSize = file.read(&data[userSize], PACKAGE_DATA_MAX_SIZE - userSize)) {
+			head.dataLen = userSize + dataSize;
+			socket.Send(head, data);
+			head.seq++;
+			progressDlg->setValue(head.seq);
 		}
-		// copy data
-		memcpy(&data[MAX_USERNAME_SIZE], msgByteArray.data(), msgByteArray.length() + 1);
 		break;
 	}
 	default:
 		QMessageBox::warning(this, tr("FBI Warning"), tr("add message head error"));
 		return;
 	}
-	head.dataLen = dataSize;
-
-	// 发送package
-	handleMessageTime(time);
+	progressDlg->hide();
+	progressDlg->setValue(0);
 
 	Message* message = new Message(ui.msgListWidget->parentWidget());
 	QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
 	handleMessage(message, item, msg, time, Message::User_Me, Message::Msg_Img, fileNames[0]);
-	// 调用send函数
-	//socket.Send(head, data);
+	
 	delete data;
 	sendMsgQueue.push_back(message);
-
+	file.close();
 	//清空临时条目列表
 	itemList.clear();
 	ui.msgListWidget->setCurrentRow(ui.msgListWidget->count() - 1);	// 设置当前行数
-
+	item->setSelected(true);
 	setButtonEnable();
 }
 
@@ -425,30 +612,37 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 		case DATA_TYPE_PICTURE: {
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
-			QString msg = QString::fromLocal8Bit(data + 20);
+			QString fileName = QString::fromLocal8Bit(data + 20);
+			QString path = QString::fromLocal8Bit("./Picture/") + fileName;
+			QFile file(path);
 
-			Message* message = new Message(ui.msgListWidget->parentWidget());
-			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-			handleMessage(message, item, msg, time, Message::User_He);
+			file.open(QIODevice::ReadOnly | QIODevice::Append);
+			file.write(data + 40, head.dataLen - 40);
+			file.close();
+
+			if (head.isCut == head.seq) {
+				Message* message = new Message(ui.msgListWidget->parentWidget());
+				QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+				handleMessage(message, item, fileName, time, Message::User_He, Message::Msg_Img, path);
+			}
 			break;
 		}
 		case DATA_TYPE_FILE: {
 			QString time = QString::number(QDateTime::currentDateTime().toTime_t());	// 获取时间戳
 			handleMessageTime(time);
-			QString msg = QString::fromLocal8Bit(data + 20);
+			QString fileName = QString::fromLocal8Bit(data + 20);
+			QString path = QString::fromLocal8Bit("./File/") + fileName;
+			QFile file(path);
 
-			Message* message = new Message(ui.msgListWidget->parentWidget());
+			file.open(QIODevice::ReadOnly | QIODevice::Append);
+			file.write(data + 40, head.dataLen - 40);
+			file.close();
 
-			char temp_name[20];
-			memcpy(temp_name, data, 20);
-
-			message->setUserName(QString::fromLocal8Bit(temp_name));
-			message->m_toUserNameList.append(currentUser.userName());
-
-			QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
-			handleMessage(message, item, msg, time, Message::User_He);
-
-
+			if (head.isCut == head.seq) {
+				Message* message = new Message(ui.msgListWidget->parentWidget());
+				QListWidgetItem* item = new QListWidgetItem(ui.msgListWidget);
+				handleMessage(message, item, fileName, time, Message::User_He, Message::Msg_File);
+			}
 			break;
 		}
 			default:
@@ -472,6 +666,7 @@ void OneRoomClient::on_package_arrived(PackageHead head, char* const data)
 			break;
 		case SERVER_RETURN_SETTING:
 			// 确认登陆成功
+			//historyNum = data[0];
 			break;
 		case SERVER_RETURN_ERROR_C:
 			if (data[0] == SEND_MESSAGE_FAIL) {
@@ -525,7 +720,14 @@ void OneRoomClient::on_logOutBtn_clicked()
 
 void OneRoomClient::on_msgHistoryBtn_clicked()
 {
+	// 请求拉取设置
+	PackageHead head;
+	head.isData = 0;
+	head.dataLen = 0;
+	head.isCut = 0;
+	head.type = CLINET_REQUIRE_HISTORY;
 
+	socket.Send(head, NULL);
 }
 
 void OneRoomClient::handle_socket_error(QString errorMsg)
@@ -538,7 +740,7 @@ void OneRoomClient::send_history_num_setting(int num)
 	int len = sizeof(int);
 	PackageHead head;
 	char* data = new char[len];
-	head.isData = 1;
+	head.isData = 0;
 	head.dataLen = len;
 	head.isCut = 0;
 	head.type = CLIENT_CHANGE_SETTING;
@@ -555,7 +757,7 @@ void OneRoomClient::send_password_setting(QString password)
 	QByteArray pwByteArray;
 	PackageHead head;
 	char* data = new char[MAX_PASSWORD_SIZE * 2];
-	head.isData = 1;
+	head.isData = 0;
 	head.dataLen = MAX_PASSWORD_SIZE * 2;
 	head.isCut = 0;
 	head.type = CLIENT_CHANGE_PASSWORD;
@@ -690,6 +892,7 @@ void OneRoomClient::reshow_mainwindow(QString userName, QString password, int hi
 {
 	// 初始值设置
 	currentUser.setInfo("", userName, QString::number(QDateTime::currentDateTime().toTime_t()), password);
+	historyNum = histroyListNum;
 
 	this->show();
 	this->setFocus();

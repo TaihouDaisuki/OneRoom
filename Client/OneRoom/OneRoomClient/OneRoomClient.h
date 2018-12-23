@@ -13,6 +13,8 @@
 #include "Socket.h"
 #include "LoginWindow.h"
 #include "SettingBoard.h"
+#include "qprogressdialog.h"
+#include "HistoryWindow.h"
 
 class OneRoomClient : public QMainWindow
 {
@@ -54,8 +56,10 @@ private:
 	LoginWindow *loginWindow;
 	SettingBoard *settingBoard;
 	QListWidget *msgListWidgetShow;
+	QProgressDialog *progressDlg;
+	HistoryWindow *historyWindow;
 
-
+	int historyNum;
 	void resizeEvent(QResizeEvent *event); // 重载事件函数
 	bool eventFilter(QObject *obj, QEvent *e);	// testedit用事件过滤器
 	void setButtonDisable();
