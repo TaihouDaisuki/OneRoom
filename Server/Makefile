@@ -7,8 +7,8 @@ CPP11FLAGS = -std=c++11
 MYSQLFLAGS = $$(mysql_config --cflags --libs)
 
 TARGET = server
-SRC = main.cpp server.cpp
-H = server.h
+SRC = main.cpp server.cpp tinyxml2.cpp
+H = server.h tinyxml2.h
 
 all: $(TARGET)
 

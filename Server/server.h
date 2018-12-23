@@ -38,8 +38,8 @@
 #define MAXNAMELEN              20
 #define MD5LEN                  32
 #define MAXDATALEN              2048
-#define CTRLPACKLEN             8
-#define MAXBUFFERLEN            2060
+#define CTRLPACKLEN             16
+#define MAXBUFFERLEN            2064
 
 // from client
 #define LOG_IN_REQ              0x00
@@ -154,8 +154,10 @@ private:
     {
         unsigned char isData;
         unsigned char Type;
-        unsigned char isCut;
-        unsigned char Seq;
+        unsigned char empty_1;
+        unsigned char empty_2;
+        unsigned int isCut;
+        unsigned int Seq;
         unsigned int Datalen;
     };
 
@@ -165,19 +167,26 @@ private:
     int change_password_request(ClientInfo *client);
     int change_setting_request(ClientInfo *client);
     int transmit_request(ClientInfo *client, CtrlPack *pack);
+    int get_history_request(ClientInfo *client);
 
     // common
     int updatebfds(fd_set fds);
     int userlist_request_to_all();
     int log_out_unexpected(ClientInfo *client);
 
+    // log part
+    void get_time_to_log();
+    // xml part
+    int ReadXMLFile(const int uid, const char* const item_name);
+    void ChangeXMLFile(const int uid, const char* const item_name, const int num);
     // mysql part
     int mysql_get_uid(const char* const account);
     void mysql_get_account(const int uid, char* const account);
     void mysql_get_username(const int uid, char* const username);
     int mysql_compare_password(const int uid, const char* const password);
     bool mysql_check_first_time(const int uid);
-    void ServerSock::mysql_insert_message(const int uid, const char* const account, const char* const message);
+    void mysql_insert_message(const int uid, const char* const account, const char* const message);
+    void mysql_get_message(const int uid, string &message, const int cnt);
 
     sockaddr_in serveraddr;
 
@@ -190,6 +199,12 @@ private:
 
     int userreq; // 0-noneed 1-resend
 
+    // log
+    const char logfilename[] = "server.log";
+    ofstream logfile;
+    // xml
+    const char xmlfilename[] = "user-config.xml";
+    // mysql
     MYSQL     *mysql;   
     MYSQL_RES *result; 
     MYSQL_ROW  row;
