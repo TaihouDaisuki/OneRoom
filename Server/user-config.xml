@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <!--one user behalfs one config.-->
+    <user id="1">
+        <history_num>10</history_num>
+    </user>
+    <user id="2">
+        <history_num>10</history_num>
+    </user>
+    <user id="3">
+        <history_num>10</history_num>
+    </user>
+    <user id="4">
+        <history_num>10</history_num>
+    </user>
+    <user id="5">
+        <history_num>10</history_num>
+    </user>
+    <!--more contacted persons.-->
+</config>

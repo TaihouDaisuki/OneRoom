@@ -1,9 +1,13 @@
 #include "server.h"
+#include "tinyxml2.h"
 
 using namespace std;
+using namespace tinyxml2;
 
 const char _ip[] = "0.0.0.0";
-const int _port = 4347;
+const int _port = 20610;
+const char logfilename[] = "server.log";
+const char xmlfilename[] = "user-config.xml";
 
 //==========ClientInfo==========
 ClientInfo::ClientInfo()
@@ -13,7 +17,7 @@ ClientInfo::ClientInfo()
     bufflen[0] = buffp[0] = 0;
     bufflen[1] = buffp[1] = 0;
 }
-ClientInfo::ClientInfo(const int _fd, const char* const _ip, const int _port)
+ClientInfo::ClientInfo(const int _fd, const char *const _ip, const int _port)
 {
     strcpy(ip, _ip);
     port = _port;
@@ -25,7 +29,8 @@ ClientInfo::ClientInfo(const int _fd, const char* const _ip, const int _port)
 }
 ClientInfo::~ClientInfo()
 {
-    close(sockfd);
+    if(sockfd != ERRSOCKET)
+        close(sockfd);
 }
 
 void ClientInfo::set(const int _userid)
@@ -52,21 +57,29 @@ int ClientInfo::Read_Bitstream()
     do
     {
         errno = 0;
-        _rs = read(sockfd, buff[0] + bufferp[0], bufflen[0] - buffp[0]);
+        _rs = read(sockfd, buff[0] + buffp[0], bufflen[0] - buffp[0]);
         buffp[0] += (_rs > 0 ? _rs : 0);
-        if(buffp[0] == bufflen[0])
+        cout<<"��Ҫ��ȡbufflen:"<<bufflen[0]<<endl;
+        if (buffp[0] == bufflen[0])
             break;
     } while (_rs < 0 && errno == EINTR);
 
-    if(_rs == 0)
+    cout<<"has read"<<buffp[0]<<endl;
+    perror("recv");
+
+    if (_rs == 0)
         return READ_CLOSE;
     else if (_rs < 0)
     {
-        if(errno == EWOULDBLOCK || errno == EAGAIN)
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
             return READ_HUNGUP;
-        cerr << "sockfd[" << sockfd "] Read error: " << strerror(errno) << endl;
+        cerr << "sockfd[" << sockfd << "] Read error: " << strerror(errno) << endl;
         cerr << "It's belong to userid = " << userid << endl;
         return READ_ERROR;
+    }
+    else {
+        if (buffp[0] < bufflen[0])
+            return READ_HUNGUP;
     }
     return READ_FINISH;
 }
@@ -76,55 +89,51 @@ int ClientInfo::Write_Bitstream()
     do
     {
         errno = 0;
-        _ws = write(sockfd, buffer[1] + buffer_p[1], bufflen[1] - buffer_p[1]);
+        _ws = write(sockfd, buff[1] + buffp[1], bufflen[1] - buffp[1]);
         buffp[1] += (_ws > 0 ? _ws : 0);
-        if(buffp[1] == bufflen[1])
+        if (buffp[1] == bufflen[1])
             break;
-    } while(_ws < 0 && errno == EINTR);
+    } while (_ws < 0 && errno == EINTR);
 
-    if(_ws == 0)
+    if (_ws == 0)
         return WRITE_CLOSE;
-    else if(_ws < 0)
+    else if (_ws < 0)
     {
-        if(errno == EWOULDBLOCK || errno == EAGAIN)
-            return WRITE_HANGUP;
-        cerr << "sockfd[" << sockfd "] Write error: " << strerror(errno) << endl;
+        if (errno == EWOULDBLOCK || errno == EAGAIN)
+            return WRITE_HUNGUP;
+        cerr << "sockfd[" << sockfd << "] Write error: " << strerror(errno) << endl;
         cerr << "It's belong to userid = " << userid << endl;
         return WRITE_ERROR;
     }
     return WRITE_FINISH;
 }
 
-void ClientInfo::Load_Buffer(void * const dst, const int len)
+void ClientInfo::Load_Buffer(void *const dst, const int len)
 {
     memcpy(dst, buff[0], len);
-
-    return 1;
 }
 void ClientInfo::reset_read_buff(const int len)
 {
     bufflen[0] = len;
     buffp[0] = 0;
 }
-void ClientInfo::Save_Buffer(void * const src, const int len)
+void ClientInfo::Save_Buffer(void *const src, const int len)
 {
     memcpy(buff[1], src, len);
     buffp[1] = 0;
     bufflen[1] = len;
-
-    return 1;
 }
 
 int ClientInfo::Rcv(void *const dst, const int len)
 {
     reset_read_buff(len);
     int _rs = Read_Bitstream();
-    while (_rs == WRITE_HUNGUP)
+    while (_rs == READ_HUNGUP || buffp[0] < bufflen[0])
     {
         sleep(1); // avoid occupy CPU
-        _rs = Write_Bitstream();
+        _rs = Read_Bitstream();
     }
-    if(_rs == READ_FINISH)
+    if (_rs == READ_FINISH)
         Load_Buffer(dst, len);
     return _rs;
 }
@@ -132,52 +141,55 @@ int ClientInfo::Snd(void *const src, const int len)
 {
     Save_Buffer(src, len);
     int _ws = Write_Bitstream();
-    while (_ws == WRITE_HUNGUP)
+    while (_ws == WRITE_HUNGUP || buffp[1] < bufflen[1])
     {
         sleep(1); // avoid occupy CPU
         _ws = Write_Bitstream();
     }
+    cout<<len<<endl;
     return _ws;
 }
 
 //==========ServerSock==========
 ServerSock::ServerSock()
 {
+    //==========log==========
+
     //==========sock==========
-	if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		cerr << "Create socket error: "<< strerror(errno) << "(errno: "<< errno <<")" << endl;
-		exit(EXIT_FAILURE);
-	}
+    if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        cerr << "Create socket error: " << strerror(errno) << "(errno: " << errno << ")" << endl;
+        exit(EXIT_FAILURE);
+    }
 
-	int flag = fcntl(listenfd, F_GETFL, 0);
-	fcntl(listenfd, F_SETFL, flag | O_NONBLOCK);
+    int flag = fcntl(listenfd, F_GETFL, 0);
+    fcntl(listenfd, F_SETFL, flag | O_NONBLOCK);
 
-	int opt = 1;
-	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt, sizeof(opt));
-	
-	memset(&serveraddr, 0, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	if (inet_pton(AF_INET, _ip, &serveraddr.sin_addr) <= 0) 
-	{
-		cerr << "inet_pton error for " << _ip << endl;
-		exit(EXIT_FAILURE);
-	}
-	serveraddr.sin_port = htons(_port);
+    int opt = 1;
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt, sizeof(opt));
 
-	//==========bind==========
-	if(bind(listenfd, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0) 
+    memset(&serveraddr, 0, sizeof(serveraddr));
+    serveraddr.sin_family = AF_INET;
+    if (inet_pton(AF_INET, _ip, &serveraddr.sin_addr) <= 0)
+    {
+        cerr << "inet_pton error for " << _ip << endl;
+        exit(EXIT_FAILURE);
+    }
+    serveraddr.sin_port = htons(_port);
+
+    //==========bind==========
+    if (bind(listenfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0)
     {
         cerr << "bind socket error: " << strerror(errno) << endl;
         exit(EXIT_FAILURE);
     }
 
     //==========listen==========
-    if(listen(sock, MAXCONNNUM) < 0)
-	{
-		cerr << "listen socket error: " << strerror(errno) << endl;
+    if (listen(listenfd, MAXCONNNUM) < 0)
+    {
+        cerr << "listen socket error: " << strerror(errno) << endl;
         exit(EXIT_FAILURE);
-	}
+    }
 
     //==========reset==========
     clientlist.clear();
@@ -187,54 +199,92 @@ ServerSock::ServerSock()
     userreq = 0;
 
     //==========database==========
-    if ((mysql = mysql_init(NULL))==NULL) 
+    if ((mysql = mysql_init(NULL)) == NULL)
     {
-    	cout << "mysql_init failed" << endl;
-    	return -1;
+        cerr << "mysql_init failed" << endl;
+        exit(EXIT_FAILURE);
     }
 
-    if (mysql_real_connect(mysql, "localhost", "u1650254", "u1650254", "db1650254", 0, NULL, 0) == NULL) 
+    if (mysql_real_connect(mysql, "localhost", "u1650254", "u1650254", "db1650254", 0, NULL, 0) == NULL)
     {
-    	cout << "mysql_real_connect failed(" << mysql_error(mysql) << ")" << endl;
-    	return -1;
+        cerr << "mysql_real_connect failed(" << mysql_error(mysql) << ")" << endl;
+        exit(EXIT_FAILURE);
     }
-    mysql_set_character_set(mysql, "gbk"); 
+    mysql_set_character_set(mysql, "gbk");
 }
 ServerSock::~ServerSock()
 {
     // save data into database
     // close all socket
+    get_time_to_log();
+    logfile << "Server Close" << endl;
+    logfile << "=====================================================" << endl << endl << endl;
+    logfile.close();
     clientlist.clear();
     mysql_close(mysql);
-    
+
     return;
+}
+
+int ServerSock::updatebfds(fd_set fds)
+{
+    int i;
+    int res_maxfd = 0;
+    for (i = 0; i < FD_SETSIZE; ++i)
+        if (FD_ISSET(i, &fds) && i > res_maxfd)
+            res_maxfd = i;
+    return res_maxfd;
 }
 
 int ServerSock::Server_Start()
 {
+    logfile.open(logfilename, ios::out | ios::app);
+
+    get_time_to_log();
+    logfile << "Server Start Running" << endl;
+    logfile << "Linsten bind to fd = " << listenfd << endl << endl;
+
     cout << "===================================" << endl;
     cout << "=  Welcome to use OneRoom Server  =" << endl;
     cout << "= The server now is under working =" << endl;
     cout << "===================================" << endl;
-    cout << endl << endl;
+    cout << endl
+         << endl;
 
-    fd_set sockfds, readfds;
+    FD_ZERO(&sockfds);
+    FD_ZERO(&readfds);
 
-	FD_ZERO(&sockfds);
-	FD_SET(listenfd, &sockfds);
+    FD_SET(listenfd, &sockfds);
 
-    while(TAIHOUDAISUKI)
+
+    while (TAIHOUDAISUKI)
     {
+        struct timeval timeout;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
         readfds = sockfds;
-        int retsel = select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
-		if (retsel <= 0)
-		{
-			cerr << "Server Select error: " << strerror(errno) << endl;
-			return SERVER_ERROR;
-		}
+        int count = updatebfds(readfds);
+       // cout << count << endl;
+        errno = 0;
+        int retsel = select(count+1, &readfds, NULL, NULL, &timeout);
+        if (retsel < 0)
+        {
+            if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN)
+                continue;
+            else
+            {
+                get_time_to_log();
+                logfile << "Server Select error: " << strerror(errno) << endl << endl;
+                return SERVER_ERROR;
+            }
+        }
+        else if (retsel == 0)
+        {
+            continue;
+        }
 
         // listen socket
-        if(FD_ISSET(fd, &readfds))
+        if (FD_ISSET(listenfd, &readfds))
         {
             int clientfd = 0, flag;
             struct sockaddr_in cliaddr;
@@ -244,140 +294,136 @@ int ServerSock::Server_Start()
                 if ((clientfd = accept(listenfd, (struct sockaddr *)&cliaddr, &clilen)) < 0)
                     break;
 
-                //解析客户端地址
                 char ipbuff[INET_ADDRSTRLEN + 1] = {0};
                 inet_ntop(AF_INET, &cliaddr.sin_addr, ipbuff, INET_ADDRSTRLEN);
                 uint16_t cli_port = ntohs(cliaddr.sin_port);
-                cout << "Server: Detect a connection from " << ipbuff << ", port " << cli_port << endl;
+                cout << "Server: Detect a connection from " << ipbuff << ", port " << cli_port << ", using fd " << clientfd << endl;
+
+                get_time_to_log();
+                logfile << "Server: Detect a connection from " << ipbuff << ", port " << cli_port << ", using fd " << clientfd << endl << endl;
 
                 ClientInfo newclient(clientfd, ipbuff, cli_port);
                 newclient.reset_read_buff(CTRLPACKLEN); // set read buff len
                 clientlist.push_back(newclient);
+                newclient.sockfd = ERRSOCKET;
 
                 flag = fcntl(clientfd, F_GETFL, 0);
                 fcntl(clientfd, F_SETFL, flag | O_NONBLOCK);
                 FD_SET(clientfd, &sockfds);
-                cout << "Server: Accept connection successfully." << endl << endl;
             }
+            cout << "Server: Accept connection successfully." << endl << endl;
         }
 
         // client socket
         list<ClientInfo>::iterator it;
-        for(it = clientlist.begin(); it != clientlist.end(); ) 
+        for (it = clientlist.begin(); it != clientlist.end();)
         {
             ClientInfo &curclient = *it;
-            if(curclient.sockfd == ERRSOCKET || !FD_ISSET(curclient.sockfd, &readfds))
+            if (curclient.sockfd == ERRSOCKET || !FD_ISSET(curclient.sockfd, &readfds))
             {
                 ++it;
                 continue;
             }
             int read_res = curclient.Read_Bitstream();
-            if(read_res == READ_HUNGUP)
+            cout<<"read"<<endl;
+            if (read_res == READ_HUNGUP)
             {
-                ++it;  // be care of it++
+                ++it; // be care of it++
                 continue;
             }
-            if(read_res == READ_ERROR || read_res == READ_CLOSE)
+            if (read_res == READ_ERROR || read_res == READ_CLOSE)
             {
-                log_out_unexpected(curclient);
+                log_out_unexpected(&curclient);
                 clientlist.erase(it++);
                 continue;
             }
-            if(read_res == READ_FINISH)  // be care of it++
+            if (read_res == READ_FINISH) // be care of it++
             {
-                Packet packet;
-                curclient.Load_Buffer(&packet);
-                if(!curclient.is_Logged_in() && (packet.isData || packet.Type != LOG_IN_REQ))
-                {
-                    // *reply request error(has not log in)
-                    curclient.reset_read_buff(CTRLPACKLEN);
-                    ++it;
-                    continue;
-                }
+                CtrlPack packet;
+                curclient.Load_Buffer(&packet, CTRLPACKLEN);
 
                 int res = 0;
-                switch(packet.isData)
+                switch (packet.isData)
                 {
-                    case 0:
+                case 0:
+                {
+                    switch (packet.Type)
                     {
-                        switch(packet.Type)
-                        {
-                            case LOG_IN_REQ:
-                            {
-                                res = log_in_request(&curclient);
-                                break;
-                            }
-                            case LOG_OUT_REQ:
-                            {
-                                res = log_out_request(&curclient);
-                                break;
-                            }
-                            case CHG_PSSW_REQ:
-                            {
-                                res = change_password_request(&curclient);
-                                break;
-                            }
-                            case CHG_SET_REQ:
-                            {
-                                res = change_setting_request(&curclient);
-                                break;
-                            }
-                        }
+                    case LOG_IN_REQ:
+                    {
+                        res = log_in_request(&curclient);
                         break;
                     }
-                    case 1:
+                    case LOG_OUT_REQ:
                     {
-                        res = transmit_request(&curclient, &packet);
+                        res = log_out_request(&curclient);
                         break;
                     }
-                    default:
+                    case CHG_PSSW_REQ:
                     {
-                        // *reply request error
+                        res = change_password_request(&curclient);
                         break;
                     }
+                    case CHG_SET_REQ:
+                    {
+                        res = change_setting_request(&curclient);
+                        break;
+                    }
+                    case GET_HISTORY:
+                    {
+                        res = get_history_request(&curclient);
+                        break;
+                    }
+                    }
+                    break;
                 }
-                if(res == -1) // socket ERROR
+                case 1:
+                {
+                    res = transmit_request(&curclient, &packet);
+                    break;
+                }
+                default:
+                {
+                    // *reply request error
+                    break;
+                }
+                }
+                if (res == -1) // socket ERROR
                 {
                     clientlist.erase(it++);
                     continue;
                 }
-                if(res == 0) // command error
-                    //send command error to client
-                    ;
                 curclient.reset_read_buff(CTRLPACKLEN); // next round reading
                 ++it;
             }
         }
 
-        if(!userreq)
+        if (!userreq)
             continue;
+        cout<<"gg"<<endl;
         // some one disconnect when sending userlist, resend it
         userreq = 0;
-        userlist_request_to_all();
-        for(it = clientlist.begin(); it != clientlist.end(); )
+        for (it = clientlist.begin(); it != clientlist.end();)
         {
-            if(it->sockfd == ERRSOCKET)
+            if (it->sockfd == ERRSOCKET)
                 clientlist.erase(it++);
             else
                 ++it;
         }
+        userlist_request_to_all();
     }
-}
-/*
-    read / write error ==> disconnect ==> remove ==> flag = 1
-    login / logout ==> flag = 0 & flush (if disconnect ==> flag = 1)
-    loop final ==> flag = 1 ==> flush ==> flag = 0 (if disconnect ==> flag = 1)
-*/
 
-int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wating for adding limit max log in number
+    return 1;
+}
+
+int ServerSock::log_in_request(ClientInfo *client) // wating for adding limit max log in number
 {
-    char account[MAXACCLEN + 1]; // get account from packet
+    char account[MAXACCLEN + 1];   // get account from packet
     char password[MAXPASSLEN + 1]; // get password from packet
-    char pass_MD5[MD5LEN + 1]; // get MD5
     int userid;
-    int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
-    bool fsttime; // select fsttime where database.account == account
-    CtrlPack _Packet = {0, REQ_ERR_DISC, 0, 0, htonl(sizeof(char))};
+    int dbpassres; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+    bool fsttime;  // select fsttime where database.account == account
+    CtrlPack _Packet = {0, REQ_ERR_DISC, 0, 0, 0, 0, htonl(sizeof(char))};
 
     int _rs = client->Rcv(account, MAXACCLEN);
     if (_rs == READ_CLOSE || _rs == READ_ERROR)
@@ -392,103 +438,145 @@ int ServerSock::log_in_request(ClientInfo *client, const char* const data) // wa
         return -1;
     }
 
+    cout<<account<<endl<<password<<endl;
+
     char buffer[MAXBUFFERLEN];
     // get account
     userid = mysql_get_uid(account);
-    if(userid == -1)
+    cout<<"userid="<<userid<<endl;
+    if (userid == -1)
     {
         // reply request account doesn't exist
+        get_time_to_log();
+        logfile << "A log in request from [ip = " << client->ip << ", port = " << client->port << "]" 
+            << "was denied because of a nonexistent account" << endl << endl;
+
         char error_number = ACC_NOT_EXIST;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
-        int _ws = client->Snd(buffer, CTRLPACKLEN + sizeof(char));
-        if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
-            log_out_unexpected(client);
-
+        client->Snd(buffer, CTRLPACKLEN + sizeof(char));
+        log_out_unexpected(client);
         return -1;
     }
 
     // search password
-    dbMD5res = mysql_compare_password(pass_MD5);
-    if(!dbMD5res)
+    dbpassres = mysql_compare_password(userid, password);
+    cout<<dbpassres<<endl;
+    if (!dbpassres)
     {
         // reply request password error
+        get_time_to_log();
+        logfile << "A log in request from [ip = " << client->ip << ", port = " << client->port << "]" 
+            << " of [userid = " << userid
+            << "] was denied because of incorrect password" << endl << endl;
+
         char error_number = PASS_ERR;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
-        int _ws = client->Snd(_Packet, CTRLPACKLEN + sizeof(char));
-        if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
-            log_out_unexpected(client);
-
+        client->Snd(buffer, CTRLPACKLEN + sizeof(char));
+        log_out_unexpected(client);
         return -1;
     }
 
     // check first time
-    
+    client->set(userid);
     fsttime = mysql_check_first_time(userid);
-    if(fsttime)
+    cout<<fsttime<<endl;
+    if (fsttime)
     {
         // reply to change default password
+        get_time_to_log();
+        logfile << "A log in request from [ip = " << client->ip << ", port = " << client->port << "]" 
+            << " of [userid = " << userid
+            << "] was forced to change password for first log in" << endl << endl;
+
         char error_number = CHG_PASS;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        _Packet.Type = REQ_ERR_CONN;
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
-        int _ws = client->Snd(_Packet, CTRLPACKLEN + sizeof(char));
+        int _ws = client->Snd(buffer, CTRLPACKLEN + sizeof(char));
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
+        {
             log_out_unexpected(client);
+            return -1;
+        }
 
-        return -1;
+        return 1;
     }
 
     // identify success
     char username[MAXNAMELEN]; // get username from database
-    mysql_get_user_name(userid, username);
+    mysql_get_username(userid, username);
 
-    map<int, ClientInfo*>::iterator it = userlist.serach(userid);
-    if(it != map.end()) // kick off
+    map<int, ClientInfo *>::iterator it = userlist.find(userid);
+    if (it != userlist.end()) // kick off
     {
-        ClientInfo* preclient = it->second;
+        ClientInfo *preclient = it->second;
 
         // send message to preclient for logging out
         char error_number = KICK_OFF;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
-        int _ws = preclient->Snd(_Packet, CTRLPACKLEN);
+        int _ws = preclient->Snd(buffer, CTRLPACKLEN);
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
             log_out_unexpected(preclient);
+
+        cout << "[userid = " << userid << " ] is kicked off from [ip = "
+            << preclient->ip << ", port = " << preclient->port << "]" << endl << endl;
         
-        cout << "[userid = " << userid << " ] is kick off from [ip = " 
-            << preclient->ip << ", port = " << preclient->port << endl;
+        get_time_to_log();
+        logfile << "[userid = " << userid << " ] is kicked off from [ip = "
+            << preclient->ip << ", port = " << preclient->port << "]" << endl << endl;
+
         preclient->reset();
         userlist.erase(it);
     }
 
     // log in
     // *read ini file into a struct
-    // *reply setting struct 
+    // *reply setting struct
     // *reply request successfully
-    _Packet.Type = REQ_SUCC;
-    _Packet.Datalen = 0; // ************************************************** the buffer length of ini file, here just testing
-    int _ws = client->Snd(_Packet, CTRLPACKLEN);
+    _Packet.Type = REQ_SET;
+    _Packet.Datalen = htonl(sizeof(unsigned char));
+    unsigned char message_cnt = (unsigned char)ReadXMLFile(client->userid, "history_num"); // get from xml file
+    char reqbuffer[CTRLPACKLEN + sizeof(unsigned char)];
+    memcpy(reqbuffer, &_Packet, CTRLPACKLEN);
+    memcpy(reqbuffer + CTRLPACKLEN, &message_cnt, sizeof(unsigned char));
+    int _ws = client->Snd(&reqbuffer, CTRLPACKLEN + sizeof(unsigned char));
     if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
         log_out_unexpected(client);
 
-    cout << "[userid = " << userid << " ] log in from [ip = " 
-        << client->ip << ", port = " << client->port << endl << endl;
+    cout << "[userid = " << userid << " ] log in from [ip = "
+         << client->ip << ", port = " << client->port << endl
+         << endl;
+
+    get_time_to_log();
+    logfile << "[userid = " << userid << " ] log in from [ip = "
+         << client->ip << ", port = " << client->port << endl
+         << endl;
+
     userlist.insert(make_pair(userid, client));
-    client->set(userid);
 
     userlist_request_to_all();
     return 1;
 }
 int ServerSock::log_out_request(ClientInfo *client)
 {
-    cout << "[userid = " << client->userid << " ] log out from [ip = " 
-        << client->ip << ", port = " << client->port << endl << endl;
+    cout << "[userid = " << client->userid << " ] log out from [ip = "
+        << client->ip << ", port = " << client->port << "]" << endl
+        << endl;
 
+    get_time_to_log();
+    logfile << "[userid = " << client->userid << " ] log out from [ip = "
+        << client->ip << ", port = " << client->port << "]" << endl
+        << endl;
+
+    FD_CLR(client->sockfd, &sockfds);
+    close(client->sockfd);
     userlist.erase(client->userid);
 
     userlist_request_to_all();
@@ -497,13 +585,10 @@ int ServerSock::log_out_request(ClientInfo *client)
 int ServerSock::change_password_request(ClientInfo *client)
 {
     char oldpassword[MAXPASSLEN + 1]; // get password from packet
-    char oldpass_MD5[MD5LEN + 1]; // get MD5
     char newpassword[MAXPASSLEN + 1]; // get password from packet
-    char newpass_MD5[MD5LEN + 1]; // get MD5
-    int dbaccres; // count(*) where database.account == account
-    int dbMD5res; // count(*) where database.account == account and database.pass_MD5 == pass_MD5
+    int dbpasswordres;                // count(*) where database.account == account and database.pass_MD5 == pass_MD5
     char uid_c[10];
-    CtrlPack _Packet = {0, REQ_ERR_DISC, 0, 0, htonl(sizeof(char))};
+    CtrlPack _Packet = {0, REQ_ERR_CONN, 0, 0, 0, 0, htonl(sizeof(char))};
 
     int _rs;
     _rs = client->Rcv(oldpassword, MAXPASSLEN);
@@ -522,17 +607,26 @@ int ServerSock::change_password_request(ClientInfo *client)
     sprintf(uid_c, "%d", client->userid);
     // search password
     char buffer[MAXBUFFERLEN];
-    dbMD5res = mysql_compare_password(oldpass_MD5);
-    if(!dbMD5res)
+    dbpasswordres = mysql_compare_password(client->userid, oldpassword);
+    cout<<dbpasswordres<<endl;
+    if (!dbpasswordres)
     {
         // reply request password error
+        get_time_to_log();
+        logfile << "A change password request from [ip = " << client->ip << ", port = " << client->port << "]" 
+            << " of [userid = " << client->userid
+            << "] was denied because of incorrect password" << endl << endl;
+
         char error_number = PASS_ERR;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, error_number, sizeof(char));
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, &error_number, sizeof(char));
 
         int _ws = client->Snd(buffer, CTRLPACKLEN + sizeof(char));
         if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
+        {
             log_out_unexpected(client);
+            return -1;
+        }
 
         return -1;
     }
@@ -540,48 +634,78 @@ int ServerSock::change_password_request(ClientInfo *client)
     // change password in database and set first_time_log_in to 0
     // reply password change successfully
     string sqlqry;
-    sqlqry = "update security set password_MD5 = \'";
-    sqlqry.append(newpass_MD5).append("\' where uid = ").append(uid_c).append(";");
+    sqlqry = "update security set password_MD5 = md5(\'";
+    sqlqry.append(newpassword).append("\') where uid = ").append(uid_c).append(";");
     mysql_query(mysql, sqlqry.c_str());
-    sqlqry = "update user set First_Time_Log_In = 1";
+    sqlqry = "update user set First_Time_Log_In = 0";
     sqlqry.append(" where uid = ").append(uid_c).append(";");
     mysql_query(mysql, sqlqry.c_str());
 
+    get_time_to_log();
+    logfile << "From [ip = " << client->ip << ", port = " << client->port << "]"
+        << " of [userid = " << client->userid
+        << "] has changed the password" << endl
+        << endl;
+
     _Packet.Type = PASS_CHG_SUCC;
     _Packet.Datalen = 0;
-    int _ws = client->Snd(_Packet, CTRLPACKLEN);
-    if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
-        log_out_unexpected(client);
+    client->Snd(&_Packet, CTRLPACKLEN);
+    log_out_unexpected(client);
+    return -1;
 }
 int ServerSock::change_setting_request(ClientInfo *client)
 {
-    // receive setting struct
-    // save struct into a ini file
-    // reply setting save successfully
+    unsigned char history_num;
+    int _rs = client->Rcv(&history_num, sizeof(unsigned char));
+    if (_rs == READ_CLOSE || _rs == READ_ERROR)
+    {
+        log_out_unexpected(client);
+        return -1;
+    }
+    ChangeXMLFile(client->userid, "history_num", (unsigned int)history_num);
+
+    get_time_to_log();
+    logfile << "From [ip = " << client->ip << ", port = " << client->port << "]"
+        << " of [userid = " << client->userid
+        << "] has changed the setting of history_message_num to " << history_num << endl
+        << endl;
 
     return 1;
 }
-int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
+int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack_origin)
 {
-    int snd_type = pack->type & 0xF;
-    int mess_type = (pack->type >> 4) & 0xF;
+    cout<<"pack->seq "<<(unsigned int) ntohl(pack_origin->Seq)<<endl;
+    CtrlPack *pack=new CtrlPack;
+    pack->isData=pack_origin->isData;
+    pack->Type=pack_origin->Type;
+    pack->Datalen=pack_origin->Datalen;
+    pack->isCut=0;
+    pack->Seq=0;
+    
+    
+    int snd_type = pack->Type & 0xF;
+    int mess_type = (pack->Type >> 4) & 0xF;
     int rcver_cnt = 0;
     char rcver_acc[MAXCONNNUM][MAXACCLEN];
     int rcver_uid[MAXCONNNUM];
-    ClientInfo* rcver_client[MAXCONNNUM];
+    ClientInfo *rcver_client[MAXCONNNUM];
     int snd_succ[MAXCONNNUM];
-    map<int, ClientInfo*>::iterator it;
+    map<int, ClientInfo *>::iterator it;
+    
+    //char *databuffer = new (nothrow) char[MAXDATALEN * (pack->isCut + 1)];
+    //����ֱ�������Ӧ�ռ�
+    char *databuffer = new (nothrow) char[ntohl(pack->Datalen)+1];
 
-    char *databuffer = new(nothrow) char[MAXDATALEN * (pack->isCut + 1)];
-    if(databuffer == NULL)
+    if (databuffer == NULL)
     {
         cerr << "Server Run Out of Memory" << endl;
         exit(EXIT_FAILURE);
     }
     int bufferlen = 0;
-    while(TAIHOUDAISUKI)
+    while (TAIHOUDAISUKI)
     {
-        _rs = client->Rcv(databuffer + bufferlen, pack->Datalen);
+        pack->Datalen = ntohl(pack->Datalen);
+        int _rs = client->Rcv(databuffer + bufferlen, pack->Datalen);
         if (_rs == READ_CLOSE || _rs == READ_ERROR)
         {
             log_out_unexpected(client);
@@ -589,11 +713,11 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
             return -1;
         }
 
-        bufferp += ntohl(pack->Datalen);  // net to host !!!
-        if(pack->Seq == pack->isCut)
+        bufferlen += pack->Datalen; // net to host !!!
+        if (pack->Seq == pack->isCut)
             break;
-            
-        _rs = client->Rcv(packet, CTRLPACKLEN);
+
+        _rs = client->Rcv(pack, CTRLPACKLEN);
         if (_rs == READ_CLOSE || _rs == READ_ERROR)
         {
             log_out_unexpected(client);
@@ -601,103 +725,102 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
             return -1;
         }
     }
-
+    //�ļ�ֱ�Ӱ���Ϣ�߼�ת�������Ͱ�
     int bufferp = 0;
     switch (snd_type)
     {
-        case P_2_P:
+    case P_2_P:
+    {
+        memcpy(rcver_acc[rcver_cnt], databuffer, MAXACCLEN);
+        rcver_uid[rcver_cnt] = mysql_get_uid(rcver_acc[rcver_cnt]);
+        bufferp += MAXACCLEN;
+        it = userlist.find(rcver_uid[rcver_cnt]);
+        if (it == userlist.end())
+            snd_succ[rcver_cnt] = 0;
+        else
         {
-            memcpy(rcver_acc[rcver_cnt], databuffer, MAXACCLEN);
+            snd_succ[rcver_cnt] = 1;
+            rcver_client[rcver_cnt] = it->second;
+        }
+        ++rcver_cnt;
+        break;
+    }
+    case P_2_G:
+    {
+        rcver_cnt = int(databuffer[bufferp++]);
+        for (int i = 0; i < rcver_cnt; ++i)
+        {
+            memcpy(rcver_acc[i], databuffer + bufferp, MAXACCLEN);
+            rcver_uid[i] = mysql_get_uid(rcver_acc[i]);
             bufferp += MAXACCLEN;
-            it = userlist.find(rcver_uid[rcver_cnt]);
-            if(it == userlist.end())
-                snd_succ[rcver_cnt] = 0;
+            it = userlist.find(rcver_uid[i]);
+            if (it == userlist.end())
+                snd_succ[i] = 0;
             else
             {
-                snd_succ[rcver_cnt] = 1;
-                rcver_client[rcver_cnt] = it->second();
-                rcver_uid[rcver_cnt] = mysql_get_uid(rcver_acc[rcver_cnt]);
+                snd_succ[i] = 1;
+                rcver_client[i] = it->second;
             }
-            ++rcver_cnt;
-            break;
         }
-        case P_2_G:
-        {
-            unsigned char rcver_cnt = databuffer[bufferp++];
-            for(int i = 0; i < rcver_cnt; ++i)
-            {
-                memcpy(rcver_acc[i], databuffer + bufferp, MAXACCLEN);
-                bufferp += MAXACCLEN;
-                it = userlist.find(rcver_uid[i]);
-                if (it == userlist.end())
-                    snd_succ[i] = 0;
-                else
-                {
-                    snd_succ[i] = 1;
-                    rcver_client[i] = it->second();
-                    rcver_uid[rcver_cnt] = mysql_get_uid(rcver_acc[rcver_cnt]);
-                }
-            }
-            break;
-        }
-        case P_2_A:
-        {
-            for(it = userlist.begin(); it != userlist.end(); ++it)
-            {
-                if(it->first == client.userid) // don't send to the sender
-                    continue;
-                snd_succ[rcver_cnt] = 1;
-                rcver_uid[rcver_cnt] = it->first;
-                rcver_client[rcver_cnt] = it->second;
-                mysql_get_username(rcver_uid[rcver_cnt], rcver_acc[rcver_cnt]);
-                ++rcver_cnt
-            }
-
-            break;
-        }
-        default:
-        {
-            rcver_cnt = 0;
-            break;
-        }
+        cout << databuffer + bufferp << endl;
+        break;
     }
-
-    // file databuffer from databuffer+bufferp to databuffer+bufferlen-1, length = bufferlen-bufferp
-    switch (mess_type)
+    case P_2_A:
     {
-        case TEXT_TYPE:
+        bufferp += MAXACCLEN;
+        for (it = userlist.begin(); it != userlist.end(); ++it)
         {
-            // *write text into common_buffer
-            break;
+            //if (it->first == client->userid) // don't send to the sender
+               // continue;
+            snd_succ[rcver_cnt] = 1;
+            rcver_uid[rcver_cnt] = it->first;
+            rcver_client[rcver_cnt] = it->second;
+            mysql_get_username(rcver_uid[rcver_cnt], rcver_acc[rcver_cnt]);
+            cout<<rcver_acc[rcver_cnt]<<endl;
+            ++rcver_cnt;
         }
-        case GRAPH_TYPE:
-        {
-            // *save graph into file
-            // *write graph into common_buffer (if file is large maybe need to send serval times)
-            break;
-        }
-        case FILE_TYPE:
-        {
-            // *save file
-            // *write file into common_buffer (if file is large maybe need to send serval times)
-            break;
-        }
-        default:
-        {
-            break;
-        }
+
+        break;
     }
+    default:
+    {
+        rcver_cnt = 0;
+        break;
+    }
+    }
+
+    char sender[MAXACCLEN + 1];
+    mysql_get_account(client->userid, sender);
+
+    cout<<"begin to send from "<<sender<<endl;
+    cout<<pack->Datalen<<endl;
+
+  //  char* messagep = databuffer + bufferp;
+    bufferp -= MAXACCLEN;
+    memcpy(databuffer + bufferp, sender, MAXACCLEN);
 
     unsigned char _isData = 1;
     unsigned char _Type = (mess_type << 4) | snd_type;
+
     unsigned char _isCut = (bufferlen - bufferp) / MAXDATALEN - 1 + !!((bufferlen - bufferp) % MAXDATALEN);
+    cout<<bufferlen<<" "<<bufferp<<endl;
+    cout<<(int)_isCut<<endl;
     char buffer[MAXBUFFERLEN];
-    for(int _Seq = 0; _Seq <= _isCut; ++_Seq)
+
+    for (unsigned char _Seq = 0; _Seq <= _isCut; ++_Seq)
     {
-        int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
-        int _Datalen = hton(curlen);
-        CtrlPack _Packet = {_isData, _Type, _isCut, _Seq, _Datalen};
-        memcpy(buffer, _Packet, CTRLPACKLEN);
+        unsigned int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
+        unsigned int _Datalen = htonl(curlen);
+        CtrlPack _Packet = {_isData, _Type,0,0,_isCut, _Seq, _Datalen};
+
+
+        //ֹͣ��ƭ���޸�Ϊԭ���İ�ͷ
+        _Packet.isCut=pack_origin->isCut;
+        _Packet.Seq=pack_origin->Seq;
+
+        cout<<"Packet len :"<<  ntohl(_Packet.Datalen)<<endl;
+
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
         memcpy(buffer + CTRLPACKLEN, databuffer + bufferp, curlen);
 
         for (int i = 0; i < rcver_cnt; ++i)
@@ -707,7 +830,7 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
 
             ClientInfo *receiver = rcver_client[i];
             if (receiver->sockfd == ERRSOCKET) // socket has error above
-                continue;                   // but we check userlist first, so this might not work, for secure, take it
+                continue;                      // but we check userlist first, so this might not work, for secure, take it
 
             int _ws = receiver->Snd(buffer, CTRLPACKLEN + curlen);
             if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
@@ -719,83 +842,132 @@ int ServerSock::transmit_request(ClientInfo *client, CtrlPack *pack)
         }
         bufferp += curlen;
     }
+    cout<<"end to send"<<endl;
     delete[] databuffer;
 
-
     int succ_cnt = 0;
-    for(int i = 0; i < rcver_cnt; ++i)
-        if(snd_succ[i])
+    for (int i = 0; i < rcver_cnt; ++i)
+        if (snd_succ[i])
             ++succ_cnt;
 
     bufferlen = MAXACCLEN * succ_cnt;
     bufferp = 0;
-    databuffer = new(nothrow) char[succlist_len];
-    if(databuffer == NULL)
+    databuffer = new (nothrow) char[bufferlen];
+    if (databuffer == NULL)
     {
         cerr << "Server Run Out of Memory" << endl;
         exit(EXIT_FAILURE);
     }
-    _isCut = succlist_len / MAXDATALEN - 1 + !!(succlist_len % MAXDATALEN);
+    _isCut = bufferlen / MAXDATALEN - 1 + !!(bufferlen % MAXDATALEN);
+    cout<<bufferlen<<" "<<bufferp<<endl;
+    cout<<(int)_isCut<<endl;
     CtrlPack _Packet = {0, REQ_SUCC, _isCut, 0, 0};
-    if(!succ_cnt)
+    if (!succ_cnt)
     {
         bufferlen = sizeof(char);
+        _isCut = 0;
         _Packet.Type = REQ_ERR_CONN;
         databuffer[0] = SND_ERR;
     }
     else
     {
         int offset = 0;
-        for(int i = 0; i < rcver_cnt; ++i)
-            if(snd_succ[i])
+        for (int i = 0; i < rcver_cnt; ++i)
+            if (snd_succ[i])
             {
                 memcpy(snd_succ + offset, rcver_acc[i], MAXACCLEN);
                 offset += MAXACCLEN;
             }
-    }
 
-    for(int _Seq = 0; _Seq <= _isCut; ++_Seq)
-    {
-        int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
-        int _Datalen = hton(curlen);
-        _Packet.Seq = _Seq;
-        _Packet.Datalen = _Datalen;
-
-        memcpy(buffer, _Packet, CTRLPACKLEN);
-        memcpy(buffer + CTRLPACKLEN, databuffer + bufferp, curlen);
-        int _ws = client->Snd(_Packet, CTRLPACKLEN);
-        if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
+        // file databuffer from databuffer+bufferp to databuffer+bufferlen-1, length = bufferlen-bufferp
+        if(pack->isCut == pack->Seq)
         {
-            log_out_unexpected(client);
-            delete[] databuffer;
-            return -1;
+            switch (mess_type)
+            {
+            case TEXT_TYPE:
+            {
+                break;
+            }
+            case GRAPH_TYPE:
+            {
+              //  char _message[] = "[ͼƬ]";
+               // messagep = _message;
+                break;
+            }
+            case FILE_TYPE:
+            {
+              //  char _message[] = "[�ļ�]";
+                //messagep = _message;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+            }
+            for (int i = 0; i < rcver_cnt; ++i)
+            {
+                if (!snd_succ[i])
+                    continue;
+           //     mysql_insert_message(rcver_uid[i], sender, messagep);
+            }
+          //  mysql_insert_message(client->userid, sender, messagep);
         }
-
-        bufferp += curlen;
     }
+    cout<<"���ݰ�����"<<bufferlen<<" "<<bufferp<<endl;
+    cout<<(int)_isCut<<endl;
+    if(ntohl(pack_origin->isCut)==0||(ntohl(pack_origin->isCut)!=0&&pack_origin->isCut==pack_origin->Seq))
+        for (unsigned char _Seq = 0; _Seq <= _isCut; ++_Seq)
+        {
+            unsigned int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
+            unsigned int _Datalen = htonl(curlen);
+            _Packet.Seq = _Seq;
+            _Packet.Datalen = _Datalen;
+
+            //ֹͣ��ƭ���޸�Ϊԭ���İ�ͷ
+            _Packet.isCut=pack_origin->isCut;
+            _Packet.Seq=pack_origin->Seq;
+
+
+            memcpy(buffer, &_Packet, CTRLPACKLEN);
+            memcpy(buffer + CTRLPACKLEN, databuffer + bufferp, curlen);
+            cout<<"*************************************"<<endl;
+            int _ws = client->Snd(buffer, CTRLPACKLEN);
+            if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
+            {
+                log_out_unexpected(client);
+                delete[] databuffer;
+                return -1;
+            }
+
+            bufferp += curlen;
+        }
     delete[] databuffer;
-    
+
     return 1;
 }
 int ServerSock::userlist_request_to_all()
 {
+    if(!userlist.size())
+        return 1;
+
     int uid[MAXCONNNUM];
     int alivecnt = 0;
     map<int, ClientInfo *>::iterator mapit;
-    for(mapit = userlist.begin(); mapit != userlist.end(); ++it)
+    for (mapit = userlist.begin(); mapit != userlist.end(); ++mapit)
         uid[alivecnt++] = mapit->first;
 
     char account[MAXACCLEN];
     char username[MAXNAMELEN];
-    int datalen = alivecnt + (MAXACCLEN + MAXNAMELEN);
-    char *data = new(nothrow) char[datalen];
+    int datalen = (MAXACCLEN + MAXNAMELEN) * alivecnt;
+    char *data = new (nothrow) char[datalen];
     int bufferp = 0;
-    if(data == NULL)
+    if (data == NULL)
     {
         cerr << "Server Run Out of Memory" << endl;
         exit(EXIT_FAILURE);
     }
-    for(int i = 0; i < alivecnt; ++i)
+    for (int i = 0; i < alivecnt; ++i)
     {
         mysql_get_account(uid[i], account);
         mysql_get_username(uid[i], username);
@@ -805,18 +977,20 @@ int ServerSock::userlist_request_to_all()
         bufferp += MAXNAMELEN;
     }
 
-    unsigned char _isCut = datalen / MAXDATALEN - 1 + !!(datalen % MAXDATALEN);
-    CtrlPack _Packet = {0, REQ_USER, _isCut, 0, 0};
+    unsigned int Cut = datalen / MAXDATALEN - 1 + !!(datalen % MAXDATALEN);
+    unsigned int _isCut = htonl(Cut);
+    CtrlPack _Packet = {0, REQ_USER, 0, 0, _isCut, 0, 0};
     char buffer[MAXBUFFERLEN];
     bufferp = 0;
     list<ClientInfo>::iterator listit;
-    for(int _Seq = 0; _Seq <= _isCut; ++_Seq)
+    for (unsigned int Seq = 0; Seq <= Cut; ++Seq)
     {
-        int curlen = (_Seq == _isCut) ? (bufferlen - bufferp) : MAXDATALEN;
-        int _Datalen = hton(curlen);
+        unsigned int _Seq = htonl(Seq);
+        unsigned int curlen = (Seq == Cut) ? (datalen - bufferp) : MAXDATALEN;
+        unsigned int _Datalen = htonl(curlen);
         _Packet.Seq = _Seq;
         _Packet.Datalen = _Datalen;
-        memcpy(buffer, _Packet, CTRLPACKLEN);
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
         memcpy(buffer + CTRLPACKLEN, data + bufferp, curlen);
 
         for (listit = clientlist.begin(); listit != clientlist.end(); ++listit)
@@ -824,59 +998,175 @@ int ServerSock::userlist_request_to_all()
             ClientInfo &client = *listit;
             if (client.sockfd == ERRSOCKET || client.userid == NOTLOGGEDIN)
                 continue;
-            
+
             int _ws = client.Snd(buffer, CTRLPACKLEN + curlen);
             if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
             {
-                log_out_unexpected(client);
+                log_out_unexpected(&client);
                 continue;
             }
         }
         bufferp += curlen;
     }
-    delete []data;
+    delete[] data;
 
-    
+    return 1;
+}
+int ServerSock::get_history_request(ClientInfo *client)
+{
+    int message_cnt = ReadXMLFile(client->userid, "history_num"); // get from xml file
+
+    string history_message = "";
+    mysql_get_message(client->userid, history_message, message_cnt);
+
+    int datalen = history_message.length() + 1;
+    char *data = new(nothrow) char[datalen];
+    int datap = 0;
+    if(data == NULL)
+    {
+        cerr << "Run out of memory" << endl;
+        exit(EXIT_FAILURE);
+    }
+    strcpy(data, history_message.c_str());
+
+    unsigned int Cut = datalen / MAXDATALEN - 1 + !!(datalen % MAXDATALEN);
+    unsigned int _isCut = htonl(Cut);
+    CtrlPack _Packet = {0, REQ_HISTORY, 0, 0, _isCut, 0, 0};
+    char buffer[MAXDATALEN];
+    for (unsigned int Seq = 0; Seq <= Cut; ++Seq)
+    {
+        unsigned int _Seq = htonl(Seq);
+        unsigned int curlen = (Seq == Cut) ? (datalen - datap) : MAXDATALEN;
+        unsigned int _Datalen = htonl(curlen);
+        _Packet.Seq = _Seq;
+        _Packet.Datalen = _Datalen;
+        memcpy(buffer, &_Packet, CTRLPACKLEN);
+        memcpy(buffer + CTRLPACKLEN, data + datap, curlen);
+
+        int _ws = client->Snd(buffer, CTRLPACKLEN + curlen);
+        if (_ws == WRITE_CLOSE || _ws == WRITE_ERROR)
+        {
+            log_out_unexpected(client);
+            delete[] data;
+            return -1;
+        }
+        datap += curlen;
+    }
+    delete[] data;
+
+    get_time_to_log();
+    logfile << "From [ip = " << client->ip << ", port = " << client->port << "]"
+        << " of [userid = " << client->userid
+        << "] request for latest " << message_cnt << " pieces of message" << endl
+        << endl;
     return 1;
 }
 
-inline int Server::log_out_unexpected(ClientInfo *client)
+int ServerSock::log_out_unexpected(ClientInfo *client)
 {
-    cout << "[userid = " << client->userid << " ] log out from [ip = " 
-        << client->ip << ", port = " << client->port << " unexpected." << endl << endl;
+    cout << "[userid = " << client->userid << " ] log out from [ip = "
+         << client->ip << ", port = " << client->port << " unexpected." << endl
+         << endl;
+        
+    get_time_to_log();
+    logfile << "[userid = " << client->userid << " ] log out from [ip = "
+         << client->ip << ", port = " << client->port << "] unexpected." << endl
+         << endl;
 
     userlist.erase(client->userid);
     close(client->sockfd);
+    FD_CLR(client->sockfd, &sockfds);
     client->sockfd = ERRSOCKET;
 
     userreq = 1;
     return 1;
 }
 
-int Server::mysql_get_uid(const char* const account)
+// log
+void ServerSock::get_time_to_log()
+{
+    time_t tt;
+    time( &tt );
+    tt = tt + 8*3600;  // transform the time zone
+    tm* t= gmtime( &tt );
+
+    logfile << "[" << t->tm_year + 1900 << "-" << t->tm_mon + 1 << "-" << t->tm_mday << " "
+        << t->tm_hour << ":" << t->tm_min << ":" << t->tm_sec << "]" << endl;
+}
+
+// xml
+int ServerSock::ReadXMLFile(const int uid, const char* const item_name)
+{
+	char uid_c[10];
+	sprintf(uid_c, "%d", uid);
+
+	XMLDocument xmlDocument;
+	xmlDocument.LoadFile(xmlfilename);
+
+	XMLElement* root = xmlDocument.RootElement();
+	XMLElement* configNode = root->FirstChildElement("user");
+	while (configNode != NULL)
+	{
+		if (strncmp(configNode->Attribute("id"), uid_c, strlen(uid_c)))
+		{
+			configNode = configNode->NextSiblingElement();
+			continue;
+		}
+		return atoi(configNode->FirstChildElement(item_name)->GetText());
+	}
+	
+	return -1;
+}
+void ServerSock::ChangeXMLFile(const int uid, const char* const item_name, const unsigned int num)
+{
+	char uid_c[10];
+	sprintf(uid_c, "%d", uid);
+	char num_c[10];
+	sprintf(num_c, "%d", num);
+
+	XMLDocument xmlDocument;
+	xmlDocument.LoadFile(xmlfilename);
+
+	XMLElement* root = xmlDocument.RootElement();
+	XMLElement* configNode = root->FirstChildElement("user");
+	while (configNode != NULL)
+	{
+		if (strncmp(configNode->Attribute("id"), uid_c, strlen(uid_c)))
+		{
+			configNode = configNode->NextSiblingElement();
+			continue;
+		}
+		configNode->FirstChildElement(item_name)->SetText(num_c);
+		xmlDocument.SaveFile(xmlfilename);
+		return;
+	}
+}
+
+// mysql
+int ServerSock::mysql_get_uid(const char *const account)
 {
     string sqlqry;
 
-    sqlqry = "select uid from user where user.account = \'";
+    sqlqry = "select uid from user where account = \'";
     sqlqry.append(account).append("\';");
-    
+
     mysql_query(mysql, sqlqry.c_str());
     result = mysql_store_result(mysql);
     row = mysql_fetch_row(result);
-    int res = row == NULL ? -1 : row[0]
+    int res = row == NULL ? -1 : atoi(row[0]);
 
     mysql_free_result(result);
 
     return res;
 }
-void Server::mysql_get_account(const int uid, char* const account)
+void ServerSock::mysql_get_account(const int uid, char *const account)
 {
     string sqlqry;
     char uid_c[10];
     sprintf(uid_c, "%d", uid);
 
-    sqlqry = "select account from security where user.id = ";
-    sqlqry.append(uid_c).append("\';");
+    sqlqry = "select account from user where uid = ";
+    sqlqry.append(uid_c).append(";");
 
     mysql_query(mysql, sqlqry.c_str());
     result = mysql_store_result(mysql);
@@ -885,14 +1175,14 @@ void Server::mysql_get_account(const int uid, char* const account)
     strcpy(account, row[0]);
     mysql_free_result(result);
 }
-void Server::mysql_get_username(const int uid, char* const username)
+void ServerSock::mysql_get_username(const int uid, char *const username)
 {
     string sqlqry;
     char uid_c[10];
     sprintf(uid_c, "%d", uid);
 
-    sqlqry = "select username from security where user.id = ";
-    sqlqry.append(uid_c).append("\';");
+    sqlqry = "select username from user where uid = ";
+    sqlqry.append(uid_c).append(";");
 
     mysql_query(mysql, sqlqry.c_str());
     result = mysql_store_result(mysql);
@@ -901,37 +1191,87 @@ void Server::mysql_get_username(const int uid, char* const username)
     strcpy(username, row[0]);
     mysql_free_result(result);
 }
-int Server::mysql_compare_password(const char* const pass_MD5)
-{
-    string sqlqry;
-
-    sqlqry = "select count(*) from security where user.id = ";
-    sqlqry.append(uid_c).append(" and password_MD5 = \'").append(pass_MD5).append("\';");
-
-    mysql_query(mysql, sqlqry.c_str());
-    result = mysql_store_result(mysql);
-    row = mysql_fetch_row(result);
-    int res = row[0] ? 1 : 0;
-
-    mysql_free_result(result);
-    
-    return res;
-}
-bool mysql_check_first_time(const int uid)
+int ServerSock::mysql_compare_password(const int uid, const char *const password)
 {
     string sqlqry;
     char uid_c[10];
     sprintf(uid_c, "%d", uid);
 
-    sqlqry = "select First_Time_Log_In from security where user.id = ";
-    sqlqry.append(uid_c).append("\';");
+    sqlqry = "select count(*) from security where uid = ";
+    sqlqry.append(uid_c).append(" and password_MD5 = md5(\'").append(password).append("\');");
 
     mysql_query(mysql, sqlqry.c_str());
     result = mysql_store_result(mysql);
     row = mysql_fetch_row(result);
-    bool res = row[0];
+    int res = atoi(row[0]) ? 1 : 0;
 
     mysql_free_result(result);
 
     return res;
+}
+bool ServerSock::mysql_check_first_time(const int uid)
+{
+    string sqlqry;
+    char uid_c[10];
+    sprintf(uid_c, "%d", uid);
+
+    sqlqry = "select First_Time_Log_In from user where uid = ";
+    sqlqry.append(uid_c).append(";");
+
+    mysql_query(mysql, sqlqry.c_str());
+    result = mysql_store_result(mysql);
+    row = mysql_fetch_row(result);
+    bool res = atoi(row[0]) ? 1 : 0;
+
+    mysql_free_result(result);
+
+    return res;
+}
+void ServerSock::mysql_insert_message(const int uid, const char* const account, const char* const message)
+{
+    string sqlqry;
+    string curtime;
+
+    sqlqry = "select FROM_UNIXTIME(unix_timestamp(now()), \'%Y%m%d%H%i%S\');";
+    mysql_query(mysql, sqlqry.c_str());
+    result = mysql_store_result(mysql);
+    row = mysql_fetch_row(result);
+    curtime = row[0];
+
+    char uid_c[10];
+    sprintf(uid_c, "%d", uid);
+
+    sqlqry = "insert into message";
+    sqlqry.append(uid_c).append("(sender, time, message) values(\'").append(account).append("\', ");
+    sqlqry.append("\'").append(curtime).append("\', ");
+    sqlqry.append("\'").append(message).append("\');");
+    mysql_query(mysql, sqlqry.c_str());
+}
+void ServerSock::mysql_get_message(const int uid, string &message, const int cnt)
+{
+    string sqlqry;
+
+    char uid_c[10];
+    sprintf(uid_c, "%d", uid);
+    char cnt_c[10];
+    sprintf(cnt_c, "%d", cnt);
+
+    sqlqry = "select FROM_UNIXTIME(unix_timestamp(tmp.time), \'%Y-%m-%d %H:%i:%S\'),tmp.sender,tmp.message from ";
+    sqlqry.append("(select * from message");
+    sqlqry.append(uid_c).append(" order by time desc limit ").append(cnt_c);
+    sqlqry.append(") as tmp order by tmp.time asc;");
+
+    mysql_query(mysql, sqlqry.c_str());
+    result = mysql_store_result(mysql);
+    if(!(int)mysql_num_rows(result))
+    {
+        message.append("No History Message\n");
+        return;
+    }
+    while((row=mysql_fetch_row(result))!=NULL)
+    {
+        message.append(row[0]).append(" "); // time yyyy-mm-dd hh:mm:ss
+        message.append(row[1]).append("\n"); // sender
+        message.append(row[2]).append("\n\n"); // history_message
+    }
 }
