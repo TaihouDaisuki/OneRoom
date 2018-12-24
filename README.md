@@ -1,7 +1,8 @@
-<<<<<<< HEAD
 # OneRoom 
 
 OneRoom is a Client+Server chat room developed by Qt/C++
+
+[Azure](https://dev.azure.com/322Team/OneRoom)
 
 Key feature include:
 
@@ -24,8 +25,3 @@ Key feature include:
 ## Development
 
 ~~Waitting for complete~~
-=======
-# OneRoom
-UWP简单群聊app——By 322Team
-项目目前托管于Azure DevOps，之后同步github
->>>>>>> b1bb9ed95a771751e841eaae867340a281021461
