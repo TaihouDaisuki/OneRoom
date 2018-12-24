@@ -8,6 +8,7 @@ Key feature include:
 - Send picture and files (Not stable)
 - Change password and other settings on client
 - Check history message
+- ~~UWP UI~~
 - Someting else (Rua)
 
 ## Contributors
