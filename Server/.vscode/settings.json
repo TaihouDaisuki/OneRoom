@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "iostream": "cpp",
+        "list": "cpp",
+        "xstring": "cpp",
+        "xtree": "cpp",
+        "xutility": "cpp",
+        "initializer_list": "cpp",
+        "system_error": "cpp",
+        "map": "cpp",
+        "ostream": "cpp",
+        "iosfwd": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "xlocale": "cpp",
+        "utility": "cpp"
+    }
+}
